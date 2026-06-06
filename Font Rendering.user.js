@@ -5,7 +5,7 @@
 // @name:en            Font Rendering (Customized)
 // @name:ko            글꼴 렌더링 (자체 사용 스크립트)
 // @name:ja            フォントのレンダリング
-// @version            2026.05.02.1
+// @version            2026.06.06.1
 // @author             F9y4ng
 // @description        无需安装MacType，优化浏览器字体渲染效果，让每个页面的字体变得更有质感。默认使用“微软雅黑”字体，也可根据喜好自定义其他字体使用。脚本针对浏览器字体渲染提供了字体重写、字体平滑、字体缩放、字体描边、字体阴影、对特殊样式元素的过滤和许可、自定义等宽字体等高级功能。脚本支持全局渲染与个性化渲染功能，可通过“单击脚本管理器图标”或“使用快捷键”呼出配置界面进行参数配置。脚本已兼容绝大部分主流浏览器及主流脚本管理器，且兼容常用的油猴脚本和浏览器扩展。
 // @description:zh-CN  无需安装MacType，优化浏览器字体渲染效果，让每个页面的字体变得更有质感。默认使用“微软雅黑”字体，也可根据喜好自定义其他字体使用。脚本针对浏览器字体渲染提供了字体重写、字体平滑、字体缩放、字体描边、字体阴影、对特殊样式元素的过滤和许可、自定义等宽字体等高级功能。脚本支持全局渲染与个性化渲染功能，可通过“单击脚本管理器图标”或“使用快捷键”呼出配置界面进行参数配置。脚本已兼容绝大部分主流浏览器及主流脚本管理器，且兼容常用的油猴脚本和浏览器扩展。
@@ -20,7 +20,7 @@
 // @supportURL         https://github.com/F9y4ng/GreasyFork-Scripts/issues
 // @updateURL          https://github.com/F9y4ng/GreasyFork-Scripts/raw/master/Font%20Rendering.meta.js
 // @downloadURL        https://github.com/F9y4ng/GreasyFork-Scripts/raw/master/Font%20Rendering.user.js
-// @require            https://f9y4ng.github.io/GreasyFork-Scripts/lib/frColorPicker.js#sha256-DgCnp+QUiODm5aPoubP4bdRzMYJH+c/eZAF94HCLdJw=
+// @require            https://f9y4ng.github.io/GreasyFork-Scripts/lib/frColorPicker.js#sha256-B1BWbun02i8s8MFUpPm7F4cvI6ahoh6cipyVZljLjTg=
 // @match              *://*/*
 // @grant              GM_getValue
 // @grant              GM.getValue
@@ -85,7 +85,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
     info: typeof GM_info !== "undefined" ? GM_info : typeof GM !== "undefined" && GM.info ? GM.info : { script: {} },
   };
   const wrappedFrom = toolkit.safeArray.from ?? ctx.Array.from ?? uctx.Array.from;
-  const orginalFns = { oS: sctx.Object.prototype.toString, aF: (...af) => wrappedFrom(...af), aS: (...as) => arrayProxy(wrappedFrom(...as)) };
+  const orginalFns = { oS: sctx.Object.prototype.toString, fS: sctx.Function.prototype.toString, aF: (...af) => wrappedFrom(...af), aS: as => arrayProxy([...as]) };
   typeof ctx.navigation === "undefined" && ["pushState", "replaceState"].forEach(m => (ctx.history[m] = customFns.eH(m)));
   fontRendering(ctx, uctx, toolkit, { ...orginalFns, ...customFns, cS: customFns.mS.filter(isNaN) });
 })(
@@ -107,7 +107,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
 
     const { safeArray, safeObject, safeJSON, safeSandbox, debugging, info: GMinfo, RC2 } = secureVars;
     const { atob, btoa, alert, prompt, confirm, console, setTimeout, requestAnimationFrame, cancelAnimationFrame } = safeSandbox;
-    const { mS, cS, aF: arrayFrom, aS: asArray, oS: getObjectType, lS: localStorage, sS: sessionStorage, oC: object } = customFuntions;
+    const { mS, cS, oS, fS, aF: arrayFrom, aS: asArray, lS: localStorage, sS: sessionStorage, oC: object } = customFuntions;
     const GMversion = GMinfo.version ?? GMinfo.scriptHandlerVersion ?? "unknown";
     const GMscriptHandler = GMinfo.scriptHandler;
     const GMsetValue = gmSelector("setValue");
@@ -124,17 +124,18 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
 
     const IS_CHN = checkLocalChineseLanguage();
     const IS_DEBUG = setDebuggerMode() || debugging;
-    const DEBUG = IS_DEBUG ? __console.bind(console, "log") : () => {};
-    const INFO = IS_DEBUG ? __console.bind(console, "info") : () => {};
-    const ERROR = IS_DEBUG ? __console.bind(console, "error") : () => {};
-    const COUNT = IS_DEBUG ? __console.bind(console, "count") : () => {};
+    const DEBUG = IS_DEBUG ? __console.bind(console, "log") : () => { };
+    const INFO = IS_DEBUG ? __console.bind(console, "info") : () => { };
+    const ERROR = IS_DEBUG ? __console.bind(console, "error") : () => { };
+    const COUNT = IS_DEBUG ? __console.bind(console, "count") : () => { };
 
     /* INITIALIZE_COMMON_CONSTANTS */
 
-    const { h: CUR_HOST, hR: CUR_HREF, hN: CUR_HOST_NAME, pN: CUR_HOST_PATH, pT: CUR_PROTOCOL, tH: TOP_HOST, iT: CUR_WINDOW_TOP, fS: IN_FRAMES } = getLocationInfo();
+    const { h: CUR_HOST, hR: CUR_HREF, hN: CUR_HOST_NAME, pN: CUR_HOST_PATH, pT: CUR_PROTOCOL, tH: TOP_HOST, iT: CUR_WINDOW_TOP, iF: IN_FRAMES } = getLocationInfo();
     const def = {
-      count: { clickTimer: 0, event: object() },
-      array: { exps: [], scaleMatrix: [], props: { window: [], element: [], html: [] }, values: new Set(), sources: new Set() },
+      count: { clickTimer: 0, RAFTimer: 0, matrix: { prev: 1, cur: 1 }, dialog: null, panel: null },
+      array: { exps: [], props: { window: [], element: [], html: [] }, values: new Set(), sources: new Set(), mutation: new Set(), observer: new Set() },
+      map: { shadow: new WeakMap(), sheets: new WeakMap(), bold: new WeakMap(), class: new WeakMap(), transition: new WeakMap() },
       const: {
         seed: generateRandomString(6, "mix"),
         root: generateRandomString(6, "char"),
@@ -144,17 +145,10 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
         cssAttrName: `fr-css-${generateRandomString(8, "hex")}`,
         boldAttrName: `fr-bold-${generateRandomString(8, "date")}`,
         iframeAttrName: `fr-iframe-${generateRandomString(8, "hex")}`,
-        attachShadow: Element.prototype.attachShadow,
-        getClientRects: Element.prototype.getClientRects,
-        getBoundingClientRect: Element.prototype.getBoundingClientRect,
-        fillText: CanvasRenderingContext2D.prototype.fillText,
-        strokeText: CanvasRenderingContext2D.prototype.strokeText,
-        getScreenCTM: SVGGraphicsElement.prototype.getScreenCTM,
-        stopImmediatePropagation: Event.prototype.stopImmediatePropagation,
       },
       static: { once: "fr-init-once", conflict: "fr-callback-conflict", viewport: "data-fr-viewport", navinfo: "__Navigation#INFO__" },
       var: {
-        curVersion: getMetaValue("version") ?? GMinfo.script.version ?? "2026.05.02.0",
+        curVersion: getMetaValue("version") ?? GMinfo.script.version ?? "2026.06.06.0",
         scriptName: getMetaValue(`name:${getLanguages()}`) ?? decrypt("Rm9udCUyMFJlbmRlcmluZyUyMChDdXN0b21pemVkKQ=="),
         scriptAuthor: getMetaValue("author") ?? GMinfo.script.author ?? decrypt("Rjl5NG5n"),
       },
@@ -298,22 +292,23 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
       _ticking(fn, type, interval, ...args) {
         const parsedInterval = Number(interval) || 0;
         let lastTime = performance.now();
-        const timerSymbol = Symbol(type);
-        const step = (currentTime = performance.now()) => {
+        const timer = ++def.count.RAFTimer;
+        const step = timestamp => {
+          const currentTime = typeof timestamp === "number" ? timestamp : performance.now();
           const elapsed = currentTime - lastTime;
-          if (elapsed < parsedInterval) return this._setTimerMap(timerSymbol, type, step);
-          type === "interval" ? (lastTime = currentTime - (elapsed % parsedInterval)) && this._setTimerMap(timerSymbol, type, step) : this.clearTimeout(timerSymbol);
+          if (elapsed < parsedInterval) return this._setTimerMap(timer, type, step);
+          type === "interval" ? (lastTime = currentTime - (elapsed % parsedInterval)) && this._setTimerMap(timer, type, step) : this.clearTimeout(timer);
           if (typeof fn === "function") fn.apply(this.context, args);
         };
-        this._setTimerMap(timerSymbol, type, step);
-        return timerSymbol;
+        this._setTimerMap(timer, type, step);
+        return timer;
       }
-      _setTimerMap(timerSymbol, type, step) {
-        this.timerMap[type][timerSymbol] = GMunsafeWindow[def.const.raf](step);
+      _setTimerMap(timer, type, step) {
+        this.timerMap[type][timer] = GMunsafeWindow[def.const.raf](step);
       }
-      _clearTimerMap(timerSymbol, type) {
-        const timerId = this.timerMap[type][timerSymbol];
-        if (typeof timerId !== "undefined" && delete this.timerMap[type][timerSymbol]) GMunsafeWindow[def.const.caf](timerId);
+      _clearTimerMap(timer, type) {
+        const timerId = this.timerMap[type][timer];
+        if (typeof timerId !== "undefined" && delete this.timerMap[type][timer]) GMunsafeWindow[def.const.caf](timerId);
       }
       setTimeout(fn, interval, ...args) {
         return this._ticking(fn, "timeout", interval, ...args);
@@ -384,7 +379,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
         this.config = config ?? { childList: true, subtree: true, attributes: true };
         try {
           const target = await this._waitForTarget(timeout);
-          if (target.nodeType && this.callbacks.size > 0) this._observeElement(target, this.config);
+          if (typeof target.nodeType === "number" && this.callbacks.size > 0) this._observeElement(target, this.config);
           return { target, observer: this.nodeObserver };
         } catch (e) {
           ERROR(`${e.name} in NodeObserver:`, e.message);
@@ -395,7 +390,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
     /* GLOBAL_GENERAL_FUNCTIONS */
 
     function gmSelector(rec) {
-      const gmFunctions = {
+      gmSelector._gmFunctions = gmSelector._gmFunctions || {
         setValue: typeof GM_setValue !== "undefined" ? GM_setValue : typeof GM !== "undefined" ? GM.setValue : localStorage?.setItem.bind(localStorage),
         getValue: typeof GM_getValue !== "undefined" ? GM_getValue : typeof GM !== "undefined" ? GM.getValue : localStorage?.getItem.bind(localStorage),
         deleteValue: typeof GM_deleteValue !== "undefined" ? GM_deleteValue : typeof GM !== "undefined" ? GM.deleteValue : localStorage?.removeItem.bind(localStorage),
@@ -406,39 +401,33 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
         unregisterMenuCommand: typeof GM_unregisterMenuCommand !== "undefined" ? GM_unregisterMenuCommand : void 0,
         contextMode: GMinfo.injectInto === "content" || GMinfo.script["inject-into"] === "content" || ["dom", "js"].includes(GMinfo.sandboxMode),
       };
-      return gmFunctions[rec] ?? __console("warn", `Grant 'GM.${rec}' is not available.`) ?? (() => {});
+      return gmSelector._gmFunctions[rec] ?? __console("warn", `Grant 'GM.${rec}' is not available.`) ?? (() => { });
     }
 
     function __console(action, message, ...args) {
-      const consoleMethods = {
+      __console._methods = __console._methods || {
         log: ["log", "%c\u27A4%c ", "display:inline-block", ""],
         info: ["log", "%c\u27A4%c ", "display:inline-block;padding:4px 0", ""],
         error: ["error", "%c\ud83d\udea9%c ", "display:inline-block", ""],
         warn: ["warn", "%c\ud83d\udea9%c ", "display:inline-block;", ""],
         count: ["count", "\u27A4 "],
       };
-      const [_, msg, consoleMethod] = [this ?? console, message ?? "", consoleMethods[action]];
-      if (!consoleMethod) return _.log(msg, ...args);
-      const [method, prefix, ...surfix] = consoleMethod;
-      return _[method](prefix + msg, ...surfix, ...args);
+      const [con, msg, method] = [this ?? console, message ?? "", __console._methods[action]];
+      return method ? con[method[0]](method[1] + msg, ...method.slice(2), ...args) : con.log(msg, ...args);
     }
 
     class LRUCache extends Map {
-      constructor(capacity = 1e2) {
-        const cap = parseInt(capacity);
+      constructor(capacity = 1e2, cap = ~~capacity) {
         super();
-        this.capacity = isNaN(cap) || cap <= 0 ? 100 : cap;
+        this.capacity = cap > 0 ? cap : 1e2;
       }
       get(key) {
         if (!super.has(key)) return;
         const value = super.get(key);
-        super.delete(key);
-        super.set(key, value);
-        return value;
+        return super.delete(key), super.set(key, value), value;
       }
       set(key, value) {
-        if (super.has(key)) super.delete(key);
-        else if (this.size >= this.capacity) super.delete(this.keys().next().value);
+        super.has(key) ? super.delete(key) : this.size >= this.capacity ? super.delete(this.keys().next().value) : void 0;
         return super.set(key, value);
       }
     }
@@ -457,7 +446,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
         typeof p === "string" && (o = t || {}) && (t = p) && (p = (/^(?:script|style|link|meta)$/i.test(t) ? document.head : document.body) || document.documentElement);
         return appendNode(p, cE(t, o));
       } catch (e) {
-        ERROR(`${e.name} in GeneralAddElement:`, { ...arguments, e });
+        ERROR(`${e.name} in GeneralAddElement:`, { p, t, o, e });
       }
     }
 
@@ -467,48 +456,51 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
     }
 
     function qS(expr, target = document) {
-      try {
-        return target.querySelector(expr);
-      } catch (_) {
-        return null;
-      }
+      return expr && typeof expr === "string" && target && typeof target.querySelector === "function" ? target.querySelector(expr) : null;
     }
 
     function qA(expr, target = document) {
-      try {
-        return asArray(target.querySelectorAll(expr));
-      } catch (_) {
-        return asArray([]);
-      }
+      return asArray(expr && typeof expr === "string" && target && typeof target.querySelectorAll === "function" ? target.querySelectorAll(expr) : []);
     }
 
     function cE(nodeName, attributes) {
       const el = document.createElement(nodeName);
-      if (getObjectType.call(attributes) !== "[object Object]") return el;
+      if (oS.call(attributes) !== "[object Object]") return el;
       for (const [key, value] of safeObject.entries(attributes)) {
-        if (["class", "className"].includes(key)) safeArray.isArray(value) ? el.classList.add(...value) : el.classList.add(value);
-        else if (["innerHTML", "textContent"].includes(key)) el[key] = value;
+        if (key === "class" || key === "className") safeArray.isArray(value) ? el.classList.add(...value) : el.classList.add(value);
+        else if (key === "innerHTML" || key === "textContent" || key === "id") el[key] = value;
         else el.setAttribute(key, value);
       }
       return el;
     }
 
-    function aS(target) {
-      return target ? def.const.attachShadow.call(target, { mode: "closed" }) : null;
+    const originAttachShadow = Element.prototype.attachShadow;
+    function createShadowRoot(target) {
+      if (!target) return null;
+      const shadow = originAttachShadow.call(target, { mode: "closed" });
+      if (!def.map.shadow.has(target)) def.map.shadow.set(target, shadow);
+      return shadow;
+    }
+
+    function gIN(selector, host, all = false) {
+      const shadow = def.map.shadow.get(host);
+      return all ? (shadow ? qA(selector, shadow) : []) : shadow ? qS(selector, shadow) : null;
     }
 
     function isShadow(node) {
       return Boolean(node && node.nodeType === 11 && node.host);
     }
 
-    function random({ range, length = 1, type = "round" }) {
-      const typedArray = global.crypto.getRandomValues(new Uint32Array(Number(length) || 1));
-      return arrayFrom(typedArray, a => (Math[type] ?? Math.round)((a / 0xffffffff) * (Number(range) || 10)));
+    function random({ range, length = 1, type = "round" }, mapFn) {
+      const typedArray = global.crypto.getRandomValues(new Uint32Array(length >= 0 ? length : 0));
+      return arrayFrom(typedArray, a => (typeof mapFn === "function" ? mapFn : Number)((Math[type] ?? Math.round)((a / 0xffffffff) * (Number(range) || 10))));
     }
 
     function uniq(array, filterFn = Boolean, mapFn = null) {
       if (!safeArray.isArray(array)) return [];
-      return arrayFrom(new Set(typeof filterFn === "function" ? array.filter(filterFn) : array), typeof mapFn === "function" ? mapFn : void 0);
+      const seen = new Set();
+      const filtered = array.filter((item, index) => !(typeof filterFn === "function" && !filterFn(item, index, array)) && !seen.has(item) && seen.add(item));
+      return typeof mapFn === "function" ? filtered.map(mapFn) : filtered;
     }
 
     function toString(value) {
@@ -543,31 +535,30 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
       }
     }
 
-    function* nodesFromChildList(children) {
-      for (const child of children.flat(Infinity)) yield typeof child?.nodeType === "number" ? child : new Text(child);
-    }
-
     function appendNode(parent, ...children) {
       if (!parent || !children.length) return;
-      const asset = { fragment: document.createDocumentFragment(), value: null };
-      for (const child of nodesFromChildList(children)) (asset.value = child) && asset.fragment.appendChild(child);
-      return parent.appendChild(asset.fragment) && delete asset.fragment && asset.value;
+      const flatChildren = children.flat(Infinity).filter(Boolean);
+      if (!flatChildren.length) return null;
+      const nodes = flatChildren.map(child => (typeof child?.nodeType === "number" ? child : new Text(child)));
+      return parent.append(...nodes), nodes[nodes.length - 1];
     }
 
-    function generateRandomString(length, type, p, m = mS, c = cS) {
-      if (type === "date") return (p = new Date()), (p = (p.setHours(10, 20, 30, 40) * p.getDate()).toString(16)).padEnd(length, p);
-      if (type === "hex" || type === "number") return (p = type === "hex" ? 16 : 10), arrayFrom(random({ range: p, length, type: "floor" }), v => v.toString(p)).join("");
-      return (p = type === "mix" ? m : c), arrayFrom(random({ range: p.length, length }), (v, i) => (p === m && !i ? c[random({ range: 70 })] : p[v])).join("");
+    function generateRandomString(l, t, p) {
+      if (t === "date") return (p = new Date()) && (p = (p.setHours(10, 20, 30, 40) * p.getDate()).toString(16)).padEnd(l, p);
+      if (t === "hex" || t === "number") return ((p = t === "hex" ? 16 : 10) && random({ range: p, length: l, type: "floor" }, v => v.toString(p))).join("");
+      return cS[random({ range: cS.length })] + ((p = t === "mix" ? mS : cS) && random({ range: p.length, length: l - 1 }, v => p[v])).join("");
     }
 
     function initTrustedTypesPolicy() {
       const policyOptions = { createHTML: s => s, createScript: s => s, createScriptURL: u => u };
       if (!global.trustedTypes?.createPolicy) return policyOptions;
+      if (global.trustedTypes.__isIntercepted__) return global.trustedTypes.defaultPolicy || policyOptions;
       const originalCreatePolicy = global.trustedTypes.createPolicy.bind(global.trustedTypes);
       const whitelist = [{ host: "bing.com", policy: "rwflyoutDefault" }];
       const policyName = global.trustedTypes.defaultPolicy?.name ?? asArray(whitelist).FindX(entry => CUR_HOST_NAME.endsWith(entry.host))?.policy ?? "default";
       const defaultPolicy = global.trustedTypes.defaultPolicy ?? originalCreatePolicy(policyName, policyOptions);
-      uniq([global, GMunsafeWindow]).forEach(w => (w.trustedTypes.createPolicy = (name, options) => (name === policyName ? defaultPolicy : originalCreatePolicy(name, options))));
+      const createPolicyWrapper = (name, options) => (name === policyName ? defaultPolicy : originalCreatePolicy(name, options));
+      uniq([global, GMunsafeWindow]).forEach(w => w?.trustedTypes && ((w.trustedTypes.createPolicy = createPolicyWrapper), (w.trustedTypes.__isIntercepted__ = true)));
       return defaultPolicy;
     }
 
@@ -604,120 +595,108 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
     }
 
     async function getNavigatorInfo() {
+      const ua = navigator.userAgent;
+      const voucher = `${GMscriptHandler} ${GMversion}`;
       const creditEngine = getRealBrowserEngine(global);
-      const userAgentData = await getUserAgentDataFromExtension(`${GMscriptHandler} ${GMversion}`);
-      return userAgentData ? getGlobalInfoFromUAD(userAgentData) : getGlobalInfoFromUA(navigator.userAgent);
-
-      function getGlobalInfoFromUAD(uad) {
-        const os = getFullPlatformName(uad.platform);
-        const mapBrandPath = ({ brand: b, version: v }) => `${/Not[^a-z]*A[^a-z]*Brand/i.test(b) ? 9 : /^(?:Chrom(?:e|ium)|Firefox|Safari)$/i.test(b) ? 5 : 1}${b}\r${v}`;
-        const [brand, brandVersion] = uad.brands?.map(mapBrandPath).sort()[0]?.slice(1).split("\r") ?? [];
-        const engineMap = { Chrome: "Blink", Chromium: "Blink", Firefox: "Gecko", Safari: "WebKit" };
-        const mapEnginePath = ({ brand, version }) => /^(?:Chrom(?:e|ium)|Firefox|Safari)$/i.test(brand) && `${brand}\r${version}`;
-        const [engine, engineVersion] = uad.brands?.map(mapEnginePath).filter(Boolean)[0]?.split("\r") ?? [brand, brandVersion];
-        const engineInfo = { engine: engineMap[capitalize(engine)] ?? getEngineFromUA(navigator.userAgent), engineVersion: parseFloat(engineVersion) || 99, creditEngine };
-        const browserInfo = { brand: (brand?.split(/\s/) ?? []).slice(-1)[0] ?? "Unknown", brandVersion: formatVersion(brandVersion), os };
-        return { ...engineInfo, ...browserInfo, source: uad.source ?? "uad", voucher: uad.voucher ?? null };
-      }
-
-      function getGlobalInfoFromUA(ua) {
-        const checkString = (str, exp = "") => new RegExp(str, exp).test(ua);
-        const getVersion = (str, offset) => checkString(str) && ua.slice(ua.indexOf(str) + offset).match(/\d+(\.\d+)*/)?.[0];
-        const { brand, brandVersion, engine, engineVersion } = getBrowserInfoFromUA(ua, checkString, getVersion);
-        return { engine, engineVersion, creditEngine, brand, brandVersion, os: getOSInfoFromUA(checkString), source: "ua", voucher: null };
-      }
-
-      async function getUserAgentDataFromExtension(voucher) {
-        const getVMUserAgentData = ({ browserName, browserVersion, os, arch }) => {
-          const [architecture, bitness] = arch?.split("-") ?? [];
-          let brands = [{ brand: capitalize(browserName), version: browserVersion }];
-          if (parseFloat(browserVersion) < 78.0 && GMinfo.userAgent) {
-            const [, brand, version] = GMinfo.userAgent.match(/\s(Chrom(?:e|ium)|Firefox)\/(\d+[.0-9]*)/i) ?? [];
-            if (brand) brands = [{ brand: capitalize(brand), version }, ...brands];
-          }
-          return { bitness, architecture, brands, platform: capitalize(os), source: "ext", voucher };
-        };
-        if (voucher.startsWith("Violentmonkey") && GMinfo.platform) return getVMUserAgentData(GMinfo.platform);
-        const getTMUserAgentData = uad => {
-          if (creditEngine === "Gecko" && parseFloat(uad.brands[0].version) < 78.0) {
-            const [, brand, version] = navigator.userAgent.match(/\s(Firefox)\/(\d+[.0-9]*)/i) ?? [];
-            if (brand) return { ...uad, brands: [{ brand: capitalize(brand), version }, ...uad.brands], source: "ua" };
-          }
-          return { ...uad, source: "ext", voucher };
-        };
-        if ((voucher.startsWith("Tampermonkey") || voucher.startsWith("ScriptCat")) && GMinfo.userAgentData) return getTMUserAgentData(GMinfo.userAgentData);
-        const getUADHighEntropyValues = async uad =>
-          await uad.getHighEntropyValues(["bitness", "architecture", "fullVersionList"]).then(rst => (rst.brands = rst.fullVersionList) && delete rst.fullVersionList && rst);
-        if (navigator.userAgentData?.brands?.[0]) return await getUADHighEntropyValues(navigator.userAgentData);
-        return null;
-      }
-
-      function getBrowserInfoFromUA(ua, checkString, getVersion) {
-        const engine = getEngineFromUA(ua);
-        const brandMap = {
-          OPR: { brand: "Opera", engine: "Blink", as: "Chrome" },
-          YaBrowser: { brand: "Yandex", engine: "Blink", as: "Chrome" },
-          Edg: { brand: "Edge", engine: "Blink", as: "Chrome" },
-          Chromium: { brand: "Chromium", engine: "Blink" },
-          Chrome: { brand: "Chrome", engine: "Blink" },
-          LibreWolf: { brand: "LibreWolf", engine: "Gecko", as: "Firefox" },
-          SeaMonkey: { brand: "SeaMonkey", engine: "Gecko", as: "Firefox" },
-          PaleMoon: { brand: "PaleMoon", engine: "Gecko", as: "Firefox" },
-          Waterfox: { brand: "Waterfox", engine: "Gecko", as: "Firefox" },
-          Firefox: { brand: "Firefox", engine: "Gecko" },
-          Konqueror: { brand: "Konqueror", engine: "webkit" },
-          Kindle: { brand: "Kindle", engine: "WebKit", as: "Version" },
-          Safari: { brand: "Safari", engine: "WebKit", as: "Version", verset: ["Version"] },
-          Trident: { brand: "IE", engine: "Trident", verset: ["MSIE", "rv"] },
-          Presto: { brand: "Opera", engine: "Presto" },
-        };
-        for (const [key, { brand, engine, verset, as }] of safeObject.entries(brandMap)) {
-          if (!checkString(key)) continue;
-          const versionKey = asArray(verset ?? []).FindX(k => checkString(k)) || key;
-          let brandVersion = getVersion(versionKey, versionKey.length + 1);
-          if (!brandVersion) continue;
-          const enVersionKey = as || key;
-          const engineVersion = parseFloat(getVersion(enVersionKey, enVersionKey.length + 1) || 99);
-          return { brand, brandVersion: formatVersion(brandVersion), engine, engineVersion };
-        }
-        const { b: brand, bv: brandVersion, ev: engineVersion } = getUnregisteredBrandAndVersionFromUA(ua);
-        return { brand, brandVersion, engine, engineVersion };
-      }
+      const userAgentData = await getUserAgentDataFromExtension();
+      if (userAgentData) return getBrowserInfoFromUAD(userAgentData);
+      const BROWSER_CONFIGS = [
+        { key: "OPR", brand: "Opera", engine: "Blink", as: "Chrome" },
+        { key: "YaBrowser", brand: "Yandex", engine: "Blink", as: "Chrome" },
+        { key: "Edg", brand: "Edge", engine: "Blink", as: "Chrome" },
+        { key: "Chrome", brand: "Chrome", engine: "Blink" },
+        { key: "Chromium", brand: "Chromium", engine: "Blink" },
+        { key: "LibreWolf", brand: "LibreWolf", engine: "Gecko", as: "Firefox" },
+        { key: "Zen", brand: "Zen", engine: "Gecko", as: "Firefox" },
+        { key: "PaleMoon", brand: "PaleMoon", engine: "Gecko", as: "Firefox" },
+        { key: "Waterfox", brand: "Waterfox", engine: "Gecko", as: "Firefox" },
+        { key: "Firefox", brand: "Firefox", engine: "Gecko" },
+        { key: "Safari", brand: "Safari", engine: "WebKit", as: "Version", verset: ["Version"] },
+      ];
+      return getBrowserInfoFromUA();
 
       function formatVersion(version) {
-        if (!version) return "0.0.0.0";
-        const numbers = version.split(".").map(num => parseInt(num) || 0);
-        while (numbers.length < 4) numbers.push(0);
-        return numbers.join(".");
-      }
-
-      function getFullPlatformName(platform) {
-        if (!platform) return "Unknown";
-        const os = capitalize(platform);
-        return /^(?:Like Mac|Ios)$/.test(os) ? "iOS" : os === "Cros" ? "Chrome OS" : os.startsWith("Win") ? "Windows" : os.startsWith("Mac") ? "MacOS" : os === "X11" ? "Linux" : os;
+        const parts = version?.split(".") ?? [];
+        return `${parseInt(parts[0]) || 0}.${parseInt(parts[1]) || 0}.${parseInt(parts[2]) || 0}.${parseInt(parts[3]) || 0}`;
       }
 
       function getRealBrowserEngine(w) {
         return w.GestureEvent ? "WebKit" : w.scrollByLines || w.getDefaultComputedStyle ? "Gecko" : w.webkitRequestFileSystem || w.webkitSpeechGrammar ? "Blink" : "Unknown";
       }
 
-      function getEngineFromUA(ua) {
+      async function getUserAgentDataFromExtension(temp) {
+        if (voucher.startsWith("Violentmonkey") && (temp = GMinfo.platform)) {
+          const { browserName, browserVersion, fullVersionList = [], os, arch } = temp;
+          const [architecture, bitness] = arch?.split("-") ?? [];
+          let brands = [{ brand: capitalize(browserName), version: browserVersion }, ...fullVersionList];
+          if (parseFloat(browserVersion) < 57.0 && (temp = GMinfo.userAgent)) {
+            const matches = temp.match(/\s(Chrom(?:e|ium)|Firefox)\/(\d+[.0-9]*)/i);
+            if (matches) brands.unshift({ brand: capitalize(matches[1]), version: matches[2] });
+          }
+          return { bitness, architecture, brands, platform: capitalize(os), source: "ext", voucher };
+        } else if ((voucher.startsWith("Tampermonkey") || voucher.startsWith("ScriptCat")) && (temp = GMinfo.userAgentData)) {
+          if (creditEngine === "Gecko" && temp.brands?.[0] && parseFloat(temp.brands[0].version) < 78.0) {
+            const matches = ua.match(/\s(Firefox)\/(\d+[.0-9]*)/i);
+            if (matches) temp.brands.unshift({ brand: capitalize(matches[1]), version: matches[2] });
+          }
+          return { ...temp, source: "ext", voucher };
+        } else if ((temp = navigator.userAgentData) && temp.getHighEntropyValues && temp.brands?.[0]) {
+          const data = await temp.getHighEntropyValues(["bitness", "architecture", "fullVersionList"]);
+          return { ...data, brands: data.fullVersionList || data.brands, voucher };
+        } else return null;
+      }
+
+      function getBrowserInfoFromUAD(uad) {
+        const mapBrandPath = ({ brand: b, version: v }) => `${/Not[^a-z]*A[^a-z]*Brand/i.test(b) ? 9 : /^(?:Chrom(?:e|ium)|Firefox|Safari)$/i.test(b) ? 5 : 1}${b}\r${v}`;
+        const [brand, brandVersion] = uad.brands?.map(mapBrandPath).sort()[0]?.slice(1).split("\r") ?? [];
+        const engineMap = { Chrome: "Blink", Chromium: "Blink", Firefox: "Gecko", Safari: "WebKit" };
+        const mapEnginePath = ({ brand, version }) => /Chrom(?:e|ium)|Firefox|Safari/i.test(brand) && `${brand}\r${version}`;
+        const [engine, engineVersion] = uad.brands?.map(mapEnginePath).filter(Boolean)[0]?.split("\r") ?? [brand, brandVersion];
+        const engineInfo = { engine: engineMap[capitalize(engine?.split(/\s/).slice(-1)[0])] ?? getEngineFromUA(), engineVersion: parseFloat(engineVersion) || 99, creditEngine };
+        const browserInfo = { brand: brand?.split(/\s/).slice(-1)[0] ?? "Unknown", brandVersion: formatVersion(brandVersion), os: getFullPlatformName(uad.platform) };
+        return { ...engineInfo, ...browserInfo, source: uad.source ?? "uad", voucher: uad.voucher };
+      }
+
+      function getBrowserInfoFromUA() {
+        const { brand, brandVersion, engine, engineVersion } = getBrandAndVersionFromUA();
+        return { engine, engineVersion, creditEngine, brand, brandVersion, os: getOSInfoFromUA(), source: "ua", voucher };
+      }
+
+      function getBrandAndVersionFromUA() {
+        const getVersion = (str, offset, index) => (index = ua.indexOf(str)) !== -1 && ua.slice(index + offset).match(/\d+[.0-9]*/)?.[0];
+        for (const { key, brand, engine, verset, as } of BROWSER_CONFIGS) {
+          if (!ua.includes(key)) continue;
+          const versionKey = verset ? asArray(verset).FindX(k => ua.includes(k)) : key;
+          if (!versionKey) continue;
+          const brandVersionRaw = getVersion(versionKey, versionKey.length + 1);
+          if (!brandVersionRaw) continue;
+          const engineVersionRaw = (as && getVersion(as, as.length + 1)) || getVersion(key, key.length + 1) || "99";
+          return { brand, brandVersion: formatVersion(brandVersionRaw), engine, engineVersion: parseFloat(engineVersionRaw) };
+        }
+        const unregistered = getUnregisteredBrandAndVersionFromUA();
+        return { brand: unregistered.b, brandVersion: unregistered.bv, engine: getEngineFromUA(), engineVersion: unregistered.ev };
+      }
+
+      function getEngineFromUA() {
         return /(?:Gecko\/|Firefox\/|FxiOS)/.test(ua) ? "Gecko" : /(?:Chrom(?:e|ium)\/|CriOS)/.test(ua) ? "Blink" : /(?:AppleWebKit\/|Version\/)/.test(ua) ? "WebKit" : "Unknown";
       }
 
-      function getUnregisteredBrandAndVersionFromUA(ua) {
-        const [nameOffset, verOffset] = [ua.lastIndexOf(" ") + 1, ua.lastIndexOf("/")];
-        if (nameOffset === 0 || verOffset === -1 || verOffset < nameOffset) return { b: "Unknown", bv: "0.0.0.0", ev: 99 };
-        const brand = ua.slice(nameOffset, verOffset).trim();
-        const brandVersion = formatVersion(ua.slice(verOffset + 1).match(/\d*\.?\d+/)?.[0]);
-        const engineVersion = parseFloat(ua.match(/(?:Chrom(?:e|ium)|Firefox|Version)\/(\d+[.0-9]*)/i)?.[1] || brandVersion || 99);
-        const validVersion = (!/(?:version|\/|\(|\)|;)/i.test(brand) && brandVersion) || "0.0.0.0";
-        return { b: brand, bv: validVersion, ev: engineVersion };
+      function getUnregisteredBrandAndVersionFromUA() {
+        const blackList = /version|mozilla|applewebkit|safari|khtml|like|gecko|mobile|chrome|firefox/i;
+        const matches = asArray(ua.matchAll(/([^/\s()]+)\/([\d.]+)/g)).reverse();
+        const [, name, ver] = matches.FindX(([, n]) => !blackList.test(n)) || ["", "Unknown", "0.0.0.0"];
+        const ev = ua.match(/(?:Chrom(?:e|ium)|Firefox|Version)\/(\d+[.0-9]*)/i)?.[1];
+        return { b: name, bv: formatVersion(ver), ev: parseFloat(ev || ver) || 99 };
       }
 
-      function getOSInfoFromUA(checkString) {
-        const platforms = ["like Mac", "Mac", "Android", "Debian", "Ubuntu", "Linux", "Win", "CrOS", "X11"];
-        const platform = asArray(platforms).FindX(p => checkString(p, "i")) || "Unknown";
+      function getFullPlatformName(os) {
+        const platformMap = { Mac: "MacOS", Win: "Windows", "like Mac": "iOS", CrOS: "Chromium OS", X11: "Linux" };
+        return platformMap[os] ?? os;
+      }
+
+      function getOSInfoFromUA() {
+        const platforms = ["like Mac", "iOS", "Mac", "Android", "Fedora", "Debian", "Ubuntu", "FreeBSD", "OpenBSD", "CrOS", "Linux", "Unix", "X11", "Xbox", "Win"];
+        const platform = asArray(platforms).FindX(p => ua.includes(p)) || "Unknown";
         return getFullPlatformName(platform);
       }
     }
@@ -730,7 +709,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
       } catch (_) {
         tH = new URL(document.referrer || global.location).host;
       }
-      return { h, hR, hN, pN, pT, tH, iT, fS: iT ? "" : "[FRAMES]" };
+      return { h, hR, hN, pN, pT, tH, iT, iF: iT ? "" : "[FRAMES]" };
     }
 
     function getMetaValue(str) {
@@ -752,7 +731,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
 
     function sleep(delay, { useCachedSetTimeout, instance } = {}) {
       const timeoutFunction = useCachedSetTimeout ? setTimeout : rAF.setTimeout;
-      const resolveFunction = resolve => void timeoutFunction(resolve, delay);
+      const resolveFunction = resolve => timeoutFunction(resolve, delay);
       const sleepPromise = new Promise(resolveFunction);
       const promiseFunction = value => sleepPromise.then(() => value);
       promiseFunction.then = sleepPromise.then.bind(sleepPromise);
@@ -762,38 +741,29 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
 
     function createDeBounce({ fn, delay, once = false, immed = false }) {
       if (typeof fn !== "function" || typeof delay !== "number" || delay < 0) throw new Error("createDeBounce: Invalid arguments");
-      let timeoutId;
+      let timeoutId, curArgs, curCtx;
+      let executeFn = () => (fn.apply(curCtx, curArgs), once ? (timeoutId = true) && (fn = curArgs = curCtx = executeFn = null) : (curArgs = curCtx = timeoutId = null), timeoutId);
       function debounced(...args) {
-        const context = this;
-        const executeFunction = () => (fn.apply(context, args), (timeoutId = once || null));
         if (timeoutId === true) return;
+        [curCtx, curArgs] = [this, args];
         if (timeoutId) rAF.clearTimeout(timeoutId);
-        else if (immed && executeFunction()) return;
-        timeoutId = rAF.setTimeout(executeFunction, delay);
+        else if (immed && executeFn()) return;
+        if (timeoutId !== true) timeoutId = rAF.setTimeout(executeFn, delay);
       }
       debounced.setImmediate = immedValue => (immed = Boolean(immedValue));
       return debounced;
     }
 
-    function safeRemoveNode(expr, scope) {
+    function safeRemoveNode(expr, scope = document) {
       if (!expr) return false;
-      const pendingNodes = safeArray.isArray(expr) ? expr : typeof expr === "string" ? qA(expr, scope) : [1, 3, 8].includes(expr?.nodeType) ? [expr] : [];
-      return pendingNodes.every(el => el.remove() || el.parentNode === null);
+      const pendingNodes = safeArray.isArray(expr) ? expr : typeof expr === "string" ? qA(expr, scope || null) : typeof expr.nodeType === "number" ? [expr] : [];
+      const result = pendingNodes.every(el => el && (el.remove(), el.parentNode === null) && !(el = null));
+      return (pendingNodes.length = 0), result;
     }
 
     function stopEventPropagation(event, { prevent = false } = {}) {
       if (prevent) event.preventDefault();
-      try {
-        def.const.stopImmediatePropagation.call(event);
-      } catch (_) {
-        event.stopImmediatePropagation();
-      }
-    }
-
-    function safeAddEventListener(element, type, handler, options = false) {
-      const eventHandler = l => void (element.removeEventListener(type, l, options), element.addEventListener(type, l, options));
-      const safeEventHandler = l => (def.count.event[String(l)] = def.count.event[String(l)] ?? l) && eventHandler(def.count.event[String(l)]);
-      return handler.name ? eventHandler(handler) : safeEventHandler(handler);
+      event.stopImmediatePropagation();
     }
 
     function convertToUnicode(str) {
@@ -802,31 +772,17 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
       return result.toUpperCase();
     }
 
-    function copyToClipboard(text, type = "text/plain") {
-      try {
-        navigator.clipboard.writeText(text);
-      } catch (_) {
-        const handler = event => {
-          event.preventDefault();
-          event.clipboardData.setData(type, text);
-          document.removeEventListener("copy", handler, true);
-        };
-        document.addEventListener("copy", handler, true);
-        document.execCommand("copy");
-      }
-    }
-
     /* ENVIRONMENT_VARIABLE_PREPROCESSING */
 
-    void (async function (tTP, JSON, navigatorInfo) {
+    void (async function (tTP, JSON, navigatorInfo, eventManager) {
       const [REMOTERENDERDATA, CONFIGURE, EXCLUDESITES, FONTSET, DOMAINFONTSET] = ["_REMOTERENDERRULESDATA_", "_CONFIGURE_", "_EXCLUDE_SITES_", "_FONTS_SET_", "_DOMAINS_FONTS_SET_"];
       const [CUSTOMFONTS, CUSTOMPROPERTY, MONORULES, MONOFONTS] = ["_CUSTOM_FONTLIST_", "_CUSTOM_PROPERTY_", "_MONOSPACED_SITERULES_", "_MONOSPACED_FONTLIST_"];
       const [MONOFEATS, FONTOVERRIDE, FONTSCALE, FONTCHECKLIST, IS_DISCUZ] = ["_MONOSPACED_FEATURE_", "_FONTOVERRIDE_DEF_", "_FONTSCALE_DEF_", "_FONTCHECKLIST_", "_FR_IS_DISCUZ_"];
-      const { engine, engineVersion, creditEngine, brand, os, voucher } = (navigatorInfo =
+      const { engine, engineVersion, creditEngine, brand, os, source } = (navigatorInfo =
         JSON.parse(navigatorInfo || null) || (sessionStorage?.setItem(def.static.navinfo, JSON.stringify((navigatorInfo = await getNavigatorInfo()))), navigatorInfo));
       const [requestHTML, requestHEAD, requestBODY] = ["html", "head", "body"].map(prop => new NodeObserver(prop));
       const [IS_REAL_BLINK, IS_REAL_GECKO, IS_REAL_WEBKIT] = ["Blink", "Gecko", "WebKit"].map(engine => engine === creditEngine);
-      const IS_CHEAT_UA = voucher === null && (engine !== creditEngine || checkBlinkCheatingUA(navigator.userAgentData));
+      const IS_CHEAT_UA = source !== "ext" && (engine !== creditEngine || (IS_REAL_BLINK && checkBlinkCheatingUA(navigator.userAgentData)));
       const [IS_GREASEMONKEY, IS_MACOS] = [["Greasemonkey", "Userscripts", "FireMonkey", "tamp", "OrangeMonkey"].includes(GMscriptHandler), os === "MacOS"];
       const [IS_CAUSED_BOLDSTROKEERROR, IS_CAUSED_BOLDSHADOWERROR] = [96, 123].map(version => compareVersion({ BLINK: version }));
       const IS_ADOPTEDSTYLESHEET_MUTABLE = "adoptedStyleSheets" in document && typeof document.adoptedStyleSheets.push === "function";
@@ -834,16 +790,14 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
       /* CUSTOMIZE_UPDATE_PROMPT_INFORMATION */
 
       const UPDATE_VERSION_NOTICE = IS_CHN
-        ? `<li class="${def.const.seed}.fixed">改进字体渲染粗体描边样式修正函数的性能。</li>
-            <li class="${def.const.seed}.fixed">改进站点缩放设置数据规则：域名匹配可包含端口号。</li>
-            <li class="${def.const.seed}.fixed">改进 iframe 框架页面跨源通信的发送模式。</li>
-            <li class="${def.const.seed}.fixed">优化增强对 <i>GM_API::GM_addElement</i> 的支持。</li>
+        ? `<li class="${def.const.seed}.fixed">修复特定的异步加载 iframe 的渲染异常问题。</li>
+            <li class="${def.const.seed}.fixed">优化脚本样式插入函数，减少内存泄漏风险。</li>
+            <li class="${def.const.seed}.fixed">优化事件监听器函数，减少内存泄漏风险。</li>
             <li class="${def.const.seed}.fixed">优化脚本核心基础函数以提升运行性能。</li>
             <li class="${def.const.seed}.fixed">修复一些已知的问题，优化代码，优化样式。</li>`
-        : `<li class="${def.const.seed}.fixed">Improved performance of Bold style correction.</li>
-            <li class="${def.const.seed}.fixed">Improved site scaling setting data rules: domain name matching can include port numbers.</li>
-            <li class="${def.const.seed}.fixed">Improved send mode for cross-origin communication.</li>
-            <li class="${def.const.seed}.fixed">Enhanced support for <i>GM_API::GM_addElement</i>.</li>
+        : `<li class="${def.const.seed}.fixed">Fixed rendering issues with async-loading iframe.</li>
+            <li class="${def.const.seed}.fixed">Optimized style inserter to reduce memory leaks.</li>
+            <li class="${def.const.seed}.fixed">Optimized event listener to reduce memory leaks.</li>
             <li class="${def.const.seed}.fixed">Optimized script core functions for performance.</li>
             <li class="${def.const.seed}.fixed">Fixed some known issues, optimized code & style.</li>`;
 
@@ -928,13 +882,13 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           `#${def.const.seed}\\.update li{margin:0;padding:1px 4px;color:#808080;font:normal 400 14px/150% var(--fr-shared-fontfamily)!important}#${def.const.seed}\\.update .${def.const.seed}\\.added{list-style-type:'\uff0b'}#${def.const.seed}\\.update .${def.const.seed}\\.removed{list-style-type:'\uff0d'}#${def.const.seed}\\.update .${def.const.seed}\\.fixed{list-style-type:'\uff20'}#${def.const.seed}\\.update .${def.const.seed}\\.info{color:#daa520;word-break:break-word;list-style-type:'\u266f'}#${def.const.seed}\\.update .${def.const.seed}\\.warn{color:#e90000;word-break:break-word;list-style-type:'\u2718'}#${def.const.seed}\\.update .${def.const.seed}\\.init{color:#65a16a;word-break:break-word;list-style-type:'\u2691'}.${def.class.dbm} input:focus,.${def.class.dbm} textarea:focus{box-shadow:inset 0 1px 3px #0000001a,0 0 4px #6e6f7099!important}@-moz-document url-prefix() {.${def.class.dbm} textarea,.${def.class.dbm} ul,#${def.const.seed}\\.custom\\.fontlist,#${def.const.seed}\\.monospaced\\.siterules,#${def.const.seed}\\.fontoverride\\.defarray,#${def.const.seed}\\.fontscale\\.defjson{scrollbar-color:#bbbbbbba #eeeeee12;scrollbar-width:thin}}`,
         frConfigure:
           `:host(#${def.id.configure}){z-index:2147483645}#${def.id.container}{position:absolute;top:10px;right:24px;z-index:99999;display:block;box-sizing:content-box;padding:4px;border-radius:12px;background:#f0f6ff!important;box-shadow:0 0 4px 0 #0000004d;color:#333;text-align:left;font-weight:700;font-size:16px!important;opacity:0;transition:opacity .5s;width:auto;overflow:hidden;pointer-events:auto}#${def.id.container} .${def.const.seed}\\.dialog\\.scrollbar{display:block;visibility:hidden;overflow-x:hidden;overflow-y:auto;max-height:max(calc(98vh - 10px),100px);min-height:10%;scrollbar-color:auto;overscroll-behavior:contain}#${def.id.container} .${def.const.seed}\\.dialog\\.scrollbar:hover{visibility:visible}#${def.id.container} .${def.const.seed}\\.dialog\\.scrollbar::-webkit-scrollbar{width:6px;height:1px}#${def.id.container} .${def.const.seed}\\.dialog\\.scrollbar::-webkit-scrollbar-thumb{border-radius:10px;background:#487baf;box-shadow:inset 0 0 5px #67a5df}#${def.id.container} .${def.const.seed}\\.dialog\\.scrollbar::-webkit-scrollbar-track{border-radius:10px;background:#efefef;box-shadow:inset 0 0 5px #67a5df}#${def.id.container} *{text-shadow:none!important;font-weight:700;font-size:16px;font-family:var(--fr-shared-fontfamily),var(--fr-shared-emoji)!important;line-height:1.5!important;-webkit-text-stroke:0 transparent!important}#${def.id.container} fieldset{display:block;visibility:visible;margin:2px;padding:4px 6px;width:auto;height:auto;min-height:475px;border:2px groove #67a5df!important;border-radius:10px;background:#f0f6ff}#${def.id.container} legend{position:relative;float:none;display:block;visibility:visible;box-sizing:content-box;margin:0;padding:0 32px 0 8px;width:auto!important;height:auto!important;border:none!important;border-radius:6px;background:#f0f6ff!important;font:normal 700 16px/150% var(--fr-shared-fontfamily)!important}#${def.id.container} fieldset ul{margin:0;padding:0;background:#f0f6ff!important}#${def.id.container} ul li{float:none;display:block;box-sizing:content-box;margin:3px 0;min-width:-webkit-fill-available;min-width:-moz-available;border:none;background:#f0f6ff!important;list-style:none;cursor:default;-webkit-user-select:none;user-select:none}#${def.id.container} ul li:before{display:none}#${def.id.container} .${def.class.rotation} svg{visibility:visible!important;overflow:hidden;width:24px;height:24px;vertical-align:initial!important;fill:#67a5df}` +
-          `#${def.id.container} .${def.class.rotation} svg:hover{cursor:help}#${def.const.seed}\\.scriptname{display:inline-block;margin:0 4px 0 0;vertical-align:bottom;overflow:hidden;min-width:130px;max-width:225px;text-overflow:ellipsis;white-space:nowrap;font-weight:700!important;-webkit-user-select:all;user-select:all}#${def.const.seed}\\.scriptname:hover{cursor:help}#${def.id.container} .${def.class.title} .${def.class.guide}{position:absolute;display:inline-block;cursor:pointer}@keyframes rotation{0%{-webkit-transform:rotate(0)}to{-webkit-transform:rotate(1turn)}}.${def.class.title} .${def.class.rotation}{position:relative;display:inline-block;top:auto;right:auto;bottom:auto;left:auto;margin:0;padding:0;width:24px;height:24px;-webkit-transform:rotate(1turn);transform-origin:center 50% 0;animation:rotation 6s linear infinite}#${def.id.container} input:not([type='range'],[type='checkbox']):focus,#${def.id.container} textarea:focus{box-shadow:inset 0 1px 3px #0000001a,0 0 6px #52a8ec99!important}#${def.id.fontList}{padding:2px 10px 0;min-height:73px}#${def.id.fontFace},#${def.id.fontSmooth}{display:flex!important;padding:2px 10px;width:calc(100% - 18px);height:40px;min-width:auto;align-items:center;justify-content:space-between}#${def.id.fontSize}{padding:2px 10px;height:60px}#${def.id.fontStroke}{padding:2px 10px;height:60px}#${def.id.fontShadow}{padding:2px 10px;height:60px}#${def.id.container} #${def.id.shadowColor}{display:flex;padding:2px 10px;width:auto;min-height:45px;align-items:center;justify-content:space-around;flex-wrap:nowrap;flex-direction:row}#${def.id.fontCss},#${def.id.fontEx}{padding:2px 10px;height:110px;min-height:110px;min-width:254px!important}#${def.id.submit}{padding:2px 10px;height:40px;display:flex!important}#${def.id.fontList} .${def.class.selector} a{text-decoration:none;font-weight:400}#${def.id.fontList} .${def.class.label}{display:inline-block;margin:-1px 4px 5px 0;padding:0;height:34px;line-height:100%!important}#${def.id.fontList} .${def.class.label} span{display:inline-block;overflow:hidden;box-sizing:border-box;padding:5px;width:max-content;height:max-content;max-width:200px;min-width:12px;background:#67a5df;color:#fff;text-overflow:ellipsis;white-space:nowrap;font-weight:400;font-size:16px!important}#${def.id.fontList} .${def.class.close}:hover{border-radius:2px;background:#2d7dca;color:#ff6347}#${def.id.fontList} .${def.class.close}{width:12px}` +
+          `#${def.id.container} .${def.class.rotation} svg:hover{cursor:help}#${def.const.seed}\\.scriptname{display:inline-block;margin:0 4px 0 0;vertical-align:bottom;overflow:hidden;min-width:130px;max-width:225px;text-overflow:ellipsis;white-space:nowrap;font-weight:700!important;-webkit-user-select:all;user-select:all}#${def.const.seed}\\.scriptname:hover{cursor:help}#${def.id.container} .${def.class.title} .${def.class.guide}{position:absolute;display:inline-block;cursor:pointer}@keyframes rotation{0%{-webkit-transform:rotate(0)}to{-webkit-transform:rotate(1turn)}}.${def.class.title} .${def.class.rotation}{position:relative;display:inline-block;top:auto;right:auto;bottom:auto;left:auto;margin:0;padding:0;width:24px;height:24px;-webkit-transform:rotate(1turn);transform-origin:center 50% 0;animation:rotation 6s linear infinite}#${def.id.container} input:not([type='range'],[type='checkbox']):focus,#${def.id.container} textarea:focus{box-shadow:inset 0 1px 3px #0000001a,0 0 6px #52a8ec99!important}#${def.id.fontList}{padding:2px 10px 0;min-height:73px}#${def.id.fontFace},#${def.id.fontSmooth}{display:flex!important;padding:2px 10px;width:calc(100% - 18px);height:40px;min-width:auto;align-items:center;justify-content:space-between}#${def.id.fontSize}{padding:2px 10px;height:60px}#${def.id.fontStroke}{padding:2px 10px;height:60px}#${def.id.fontShadow}{padding:2px 10px;height:60px}#${def.id.container} #${def.id.shadowColor}{display:flex;padding:2px 10px;width:auto;min-height:45px;align-items:center;justify-content:space-around;flex-wrap:nowrap;flex-direction:row}#${def.id.fontCss},#${def.id.fontEx}{padding:2px 10px;height:110px;min-height:110px;min-width:254px!important}#${def.id.submit}{padding:2px 10px;height:40px;display:flex!important}#${def.id.fontList} .${def.class.selector} a{text-decoration:none;font-weight:400}#${def.id.fontList} .${def.class.label}{display:inline-block;margin:-1px 4px 0 0;padding:0;height:34px;line-height:100%!important}#${def.id.fontList} .${def.class.label} span{display:inline-block;overflow:hidden;box-sizing:border-box;padding:5px;width:max-content;height:max-content;max-width:200px;min-width:12px;background:#67a5df;color:#fff;text-overflow:ellipsis;white-space:nowrap;font-weight:400;font-size:16px!important}#${def.id.fontList} .${def.class.close}:hover{border-radius:2px;background:#2d7dca;color:#ff6347}#${def.id.fontList} .${def.class.close}{width:12px}` +
           `#${def.id.fontList} .${def.class.selector}{overflow-x:hidden;box-sizing:border-box;margin:0 0 6px 0;padding:6px 0 0 6px;width:100%;max-width:254px;max-height:90px;min-width:100%;min-height:45px;border:2px solid #67a5df!important;border-radius:6px;overscroll-behavior:contain;scrollbar-color:auto}#${def.id.selector}{width:100%;max-width:100%;display:none}#${def.id.selector} label{display:block;margin:0 0 4px;color:#333;cursor:auto}#${def.id.cleaner}{margin-left:5px;cursor:pointer}#${def.id.cleaner}:hover{color:#dc143c}#${def.id.fontList} .${def.class.selector}::-webkit-scrollbar{width:6px;height:1px}#${def.id.fontList} .${def.class.selector}::-webkit-scrollbar-thumb{border-radius:10px;background:#487baf;box-shadow:inset 0 0 2px #67a5df}#${def.id.fontList} .${def.class.selector}::-webkit-scrollbar-track{border-radius:10px;background:#efefef;box-shadow:inset 0 0 2px #67a5df}#${def.id.fontList} .${def.class.selectFontID} span.${def.class.spanlabel},#${def.id.selector} span.${def.class.spanlabel}{display:block!important;margin:0!important;padding:0 0 4px;width:auto;border:0;background:transparent!important;color:#333;text-align:left!important}#${def.id.fontList} .${def.class.selectFontID}{width:auto}#${def.id.fontList} .${def.class.selectFontID} input{overflow:hidden;box-sizing:border-box;margin:0;padding:1px 4px 1px 0px;width:230px;height:42px;max-width:100%;min-width:100%;outline:none;border:2px solid #67a5df;border-radius:6px;background:#fafafa;text-indent:8px;text-overflow:ellipsis;color:#333;font:normal 700 16px/150% var(--fr-shared-fontfamily)!important}#${def.id.fontList} .${def.class.selectFontID} input[disabled]{pointer-events:none!important}#${def.id.fontList} input[disabled]::placeholder{color:#444a!important}#${def.id.fontList} .${def.class.selectFontID} input:focus:not(:placeholder-shown)~span{display:none}#${def.id.fontList} .${def.class.selectFontID} input::-webkit-search-cancel-button{margin:auto 4px;cursor:pointer}#${def.id.fontList} .${def.class.selectFontID} dl{display:none;position:absolute;z-index:1000;overflow-x:hidden;box-sizing:content-box;margin:4px 0 0;padding:4px 8px;width:auto;max-width:calc(100% - 68px);max-height:298px;min-width:60%;border:2px solid #67a5df!important;border-radius:6px;background:#fff;white-space:nowrap;font-size:18px!important;overscroll-behavior:contain;scrollbar-color:auto}#${def.const.seed}\\.fontrewrite\\.def:hover,#${def.const.seed}\\.fontscale\\.def:hover{cursor:help;color:#8b0000}` +
           `#${def.const.seed}\\.search::placeholder{color:#3699!important;font:normal 700 16px/150% var(--fr-shared-fontfamily)!important}#${def.id.fontList} .${def.class.selectFontID} dl::-webkit-scrollbar{width:10px;height:1px}#${def.id.fontList} .${def.class.selectFontID} dl::-webkit-scrollbar-thumb{border-radius:10px;background:#487baf;box-shadow:inset 0 0 5px #67a5df}#${def.id.fontList} .${def.class.selectFontID} dl::-webkit-scrollbar-track{border-radius:10px;background:#efefef;box-shadow:inset 0 0 5px #67a5df}#${def.id.fontList} .${def.class.selectFontID} dl dd{display:block;overflow-x:hidden;box-sizing:content-box;margin:1px 8px;padding:5px 0;width:-moz-available;width:-webkit-fill-available;max-width:100%;min-width:100%;text-overflow:ellipsis;font-weight:400;font-size:21px!important}#${def.id.fontList} .${def.class.selectFontID} dl dd:hover{overflow-x:hidden;box-sizing:content-box;min-width:-moz-available;min-width:-webkit-fill-available;background:#67a5df;color:#fff;text-overflow:ellipsis}.${def.class.checkbox}{display:none!important}.${def.class.checkbox}+label{position:relative;display:inline-block;box-sizing:content-box;margin:0 2px 0 0;padding:0;width:76px;height:32px;border-radius:7px;background:#f7836d;box-shadow:inset 0 0 10px #0000001a,0 0 5px #f5929266;white-space:nowrap;cursor:pointer}.${def.class.checkbox}+label::before{position:absolute;top:0;left:0;z-index:99;width:24px;height:32px;border-radius:7px;background:#fff;box-shadow:0 0 1px #00000099;color:#fff;content:" "}.${def.class.checkbox}+label::after{position:absolute;top:0;left:28px;padding:5px;border-radius:100px;color:#fff;content:"OFF";font-weight:700;font-style:normal;font-size:16px}.${def.class.checkbox}:checked+label{margin:0 2px 0 0;background:#67a5df!important;box-shadow:inset 0 0 10px #0000001a,0 0 5px #92c4f566;cursor:pointer}.${def.class.checkbox}:checked+label::after{left:10px;content:"ON"}.${def.class.checkbox}:checked+label::before{position:absolute;left:52px;z-index:99;content:" "}#${def.id.fface} label,#${def.id.fface}+label::after,#${def.id.fface}+label::before,#${def.id.smooth} label,#${def.id.smooth}+label::after,#${def.id.smooth}+label::before{-webkit-transition:all .3s ease-in;transition:all .3s ease-in}` +
           `#${def.id.fontShadow} div.${def.class.flex}:before,#${def.id.fontShadow} div.${def.class.flex}:after,#${def.id.fontStroke} div.${def.class.flex}:before,#${def.id.fontStroke} div.${def.class.flex}:after,#${def.id.fontSize} div.${def.class.flex}:before,#${def.id.fontSize} div.${def.class.flex}:after{display:none}#${def.id.shadowSize},#${def.id.strokeSize},#${def.id.fontScale}{box-sizing:content-box;margin:0 10px 0 0!important;padding:0;width:56px!important;height:32px!important;outline:none!important;border:2px solid #67a5df!important;border-radius:4px;background:#fafafa!important;color:#111!important;text-align:center;text-indent:0;font-weight:400!important;font-size:17px!important;font-family:'Anton',Impact,serif!important}#${def.id.fontScale}[disabled]{background:#e4e7edd1!important;color:#555!important;filter:grayscale(.9)}#${def.id.fviewport},#${def.id.fstroke},#${def.id.rdCanvas}{visibility:visible;width:auto;color:#666;font-size:12px!important}#${def.id.fviewport}>label,#${def.id.fstroke}>label,#${def.id.rdCanvas}>label{float:none!important;display:inline!important;margin:0!important;padding:0 4px 0 2px!important;color:#666!important;font-size:12px!important;cursor:help!important}#${def.id.fixViewport},#${def.id.fixStroke},#${def.id.renderCanvas}{display:inline-block;margin:0 2px 0 0!important;width:14px!important;height:14px!important;vertical-align:text-bottom;cursor:pointer;-webkit-appearance:none!important}#${def.id.fixViewport}:checked::after,#${def.id.fixStroke}:checked::after,#${def.id.renderCanvas}:checked::after{border:0!important;background:#65a0db;color:#fff;content:"\u2713";font-weight:700;font-size:12px;line-height:14px}.${def.class.flex}{display:flex;width:auto;min-width:100%;align-items:center;justify-content:space-between;flex-wrap:nowrap;flex-direction:row}.${def.class.slider} input{visibility:hidden}#${def.id.fixViewport}::after,#${def.id.fixStroke}::after,#${def.id.renderCanvas}::after{position:relative;top:0;display:inline-block;margin:0;padding:0;width:14px;height:14px;border-radius:3px;background:#aaa;color:#fff;content:"\u2717";vertical-align:top;text-align:center;font-weight:700;font-size:10px;line-height:14px}` +
           `#${def.id.shadowColor} .${def.class.frColorPicker} #${def.id.color}{box-sizing:border-box;margin:0;padding:0 8px 0 0;min-width:160px;max-width:160px;height:35px!important;outline:none!important;border:2px solid #67a5df!important;border-radius:4px;background:#fdfdffb0;color:#333!important;text-align:center;text-indent:0;font-weight:400!important;font-size:18px!important;font-family:'Anton',Impact,serif!important;cursor:pointer}#${def.id.fontCss} textarea,#${def.id.fontEx} textarea{display:block;box-sizing:border-box;margin:0;padding:5px;width:calc(100% - 2px)!important;height:78px;max-width:calc(100% - 2px);max-height:78px;min-width:calc(100% - 2px);min-height:78px;outline:none!important;border:2px solid #67a5df!important;border-radius:6px;scrollbar-color:auto;color:#0b5b9c!important;font:normal 600 14px/150% var(--fr-shared-monospace)!important;resize:none;cursor:auto;word-break:break-all;overscroll-behavior:contain;scrollbar-color:auto}#${def.id.fontCss} textarea::-webkit-scrollbar{width:6px;height:1px}#${def.id.fontCss} textarea::-webkit-scrollbar-thumb{border-radius:10px;background:#487baf;box-shadow:inset 0 0 2px #67a5df}#${def.id.fontCss} textarea::-webkit-scrollbar-track{border-radius:10px;background:#efefef;box-shadow:inset 0 0 2px #00000033}#${def.id.fontEx} textarea{background:#fafafa!important}#${def.id.fontEx} textarea::-webkit-scrollbar{width:6px;height:1px}#${def.id.fontEx} textarea::-webkit-scrollbar-thumb{border-radius:10px;background:#487baf;box-shadow:inset 0 0 2px #67a5df}#${def.id.fontEx} textarea::-webkit-scrollbar-track{border-radius:10px;background:#efefef;box-shadow:inset 0 0 2px #67a5df}.${def.class.switcher}{float:right;box-sizing:border-box;margin:-2px 4px 0 0;padding:0 6px;border:2px double #67a5df;border-radius:4px;color:#0a68c1;}#${def.id.fontCss} textarea::placeholder,#${def.id.fontEx} textarea::placeholder{color:#555;font:italic 500 14px/150% var(--fr-shared-fontfamily)!important;opacity:.85}#${def.id.cSwitch}:hover,#${def.id.eSwitch}:hover{cursor:pointer;-webkit-user-select:none;user-select:none}.${def.class.notreadonly}{background:linear-gradient(45deg,#e9ffe9,#e9ffe9 25%,transparent 0,transparent 50%,#e9ffe9 0,#e9ffe9 75%,transparent 0,transparent)!important;background-color:#f7fff7!important;background-size:50px 50px!important}#${def.id.submit} .${def.class.submit}{margin-left:auto}#${def.id.backup}{display:none}` +
           `#${def.id.submit} button{box-sizing:border-box;margin:0;padding:5px 10px;width:auto;height:35px;min-width:min-content;min-height:35px;border:2px solid #6ba7e0;border-radius:6px;background:#67a5df;background-image:none;color:#fff!important;font:normal 600 14px/150% var(--fr-shared-fontfamily)!important;cursor:pointer}#${def.id.submit} button:hover{box-shadow:0 0 5px #042f6459!important}#${def.id.submit} .${def.class.cancel},#${def.id.submit} .${def.class.reset}{margin-right:6px}.${def.class.anim}{border:2px solid #dc143c!important;background:#dc143c!important;animation:jiggle 1.8s ease-in infinite}@keyframes jiggle{48%,62%{transform:scale(1,1)}50%{transform:scale(1.1,.9)}56%{transform:scale(.9,1.1) translate(0,-5px)}59%{transform:scale(1,1) translate(0,-3px)}}.${def.class.tooltip}{position:relative;padding:0;cursor:help;-webkit-user-select:none;user-select:none}.${def.class.tooltip}:active .${def.class.tooltip}{display:block}.${def.const.seed}\\.mgl\\:-5p{margin:0 0 0 -5px}#${def.id.container} .${def.class.tooltip} .${def.class.tooltip} *{font-size:14px}.${def.class.tooltip} .${def.class.tooltip}{position:absolute;z-index:999999;display:none;box-sizing:content-box;padding:10px 10px 0 10px;width:234px;max-width:234px;border:2px solid #b8c4ce;border-radius:6px;background:#54a2ec;color:#fff;font-weight:400;opacity:.92;word-break:break-all}#${def.id.container} .${def.class.tooltip} .${def.class.tooltip} em{font-style:normal}#${def.id.container} .${def.class.tooltip} .${def.class.tooltip} strong{color:#ff8c00;font-size:18px}#${def.id.container} .${def.class.tooltip} .${def.class.tooltip} p{display:block;margin:0 0 10px;color:#fff;text-indent:0;line-height:150%}.${def.class.ps1}{position:relative;top:-33px;right:3px;float:right;margin:0;padding:0;width:24px;height:0}.${def.class.ps2}{top:35px;right:-7px}.${def.class.ps3},.${def.class.ps4},.${def.class.ps5}{bottom:30px;left:auto}#${def.id.fshadow}{visibility:hidden;margin-top:5px;position:absolute;z-index:999;box-sizing:content-box;padding:10px;width:234px;max-width:234px;border:2px solid #67a5df;border-radius:6px;background:#f0f6ff;color:#333;opacity:.92;left:21px}#${def.id.fshadow} .${def.const.seed}\\.fix\\.label{display:flex;align-items:center;justify-content:space-around}#${def.id.fshadow} .${def.const.seed}\\.fix\\.text{padding:5px;font-size:12px;font-weight:400;line-height:170%!important;color:#808287;word-break:break-all}` +
-          `.${def.const.seed}\\.mg\\:0\\.pd\\:0{margin:0;padding:0}.${def.const.seed}\\.checkbox{height:32px;align-self:center}.${def.const.seed}\\.ft\\:gs1{filter:grayscale(1)!important}.${def.const.seed}\\.mg\\:0-3p\\.pd\\:0{margin:0 -3px;padding:0}.${def.const.seed}\\.mgb\\:6p{margin:0 0 6px 0}.${def.const.seed}\\.bdlr\\:4px{border-top-left-radius:4px;border-bottom-left-radius:4px}.${def.const.seed}\\.bdrr\\:4px{border-top-right-radius:4px;border-bottom-right-radius:4px}.${def.const.seed}\\.usel\\:none{user-select:none!important}.${def.const.seed}\\.h\\:35p\\.mh\\:35p{height:35px!important;min-height:35px!important}.${def.const.seed}\\.prvw{background:#ff7f50!important;border-color:#ff7f50!important}.${def.const.seed}\\.input\\.color{background-position:left top,left top!important;background-size:var(--fr-input-gb-size,"auto,35px 16px")!important;background-repeat:repeat-y,repeat-y!important;background-origin:padding-box,padding-box!important;background-image:linear-gradient(90deg,var(--fr-input-color) 0,var(--fr-input-color) var(--fr-input-color-edge,35px),transparent var(--fr-input-color-edge2,36px),transparent),url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACMAAAAQCAYAAACcN8ZaAAAAAXNSR0IArs4c6QAAAFNJREFUSEtjnDlz5n8GPODs2bP4pBmMjY3xypOin3HUMUhhiRyyoyGDnMhGQwZXlhu8IZOWloa3nKFmOYItdJDLIcZRxyAF0WjI4MpNoyEz5EIGAMmNh+nDrPy/AAAAAElFTkSuQmCC")!important;padding-left:var(--fr-input-padding-left,43px)!important}#${def.id.fontList} .${def.class.selectFontID} dl>dt{all:initial;display:none;padding:8px;border-radius:4px;border:1px solid #e51111;background:#e51111;word-break:break-all;color:#efea11;font-size:15px;cursor:progress}@-moz-document url-prefix() {#${def.id.fontList} .${def.class.label}{margin:-1px 0 4px 0}#${def.id.fontList} .${def.class.selectFontID} input{padding:1px 24px 1px 0px!important}#${def.id.fontList} .${def.class.selectFontID} input:focus:not(:placeholder-shown){padding:1px 8px 1px 0px!important}#${def.id.container} .${def.const.seed}\\.dialog\\.scrollbar{padding:0 4px 0 2px}#${def.id.container} .${def.const.seed}\\.dialog\\.scrollbar,#${def.id.fontList} .${def.class.selector},#${def.id.fontList} .${def.class.selectFontID} dl,#${def.id.fontCss} textarea,#${def.id.fontEx} textarea{scrollbar-color: #c3cdddff #f1f0f012;scrollbar-width:thin}}`,
+          `.${def.const.seed}\\.mg\\:0\\.pd\\:0{margin:0;padding:0}.${def.const.seed}\\.checkbox{height:32px;align-self:center}.${def.const.seed}\\.ft\\:gs1{filter:grayscale(1)!important}.${def.const.seed}\\.mg\\:0-3p\\.pd\\:0{margin:0 -3px;padding:0}.${def.const.seed}\\.mgb\\:6p{margin:0 0 6px 0}.${def.const.seed}\\.bdlr\\:4px{border-top-left-radius:4px;border-bottom-left-radius:4px}.${def.const.seed}\\.bdrr\\:4px{border-top-right-radius:4px;border-bottom-right-radius:4px}.${def.const.seed}\\.usel\\:none{user-select:none!important}.${def.const.seed}\\.h\\:35p\\.mh\\:35p{height:35px!important;min-height:35px!important}.${def.const.seed}\\.prvw{background:#ff7f50!important;border-color:#ff7f50!important}.${def.const.seed}\\.input\\.color{background-position:left top,left top!important;background-size:var(--fr-input-gb-size,"auto,35px 16px")!important;background-repeat:repeat-y,repeat-y!important;background-origin:padding-box,padding-box!important;background-image:linear-gradient(90deg,var(--fr-input-color) 0,var(--fr-input-color) var(--fr-input-color-edge,35px),transparent var(--fr-input-color-edge2,36px),transparent),url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACMAAAAQCAYAAACcN8ZaAAAAAXNSR0IArs4c6QAAAFNJREFUSEtjnDlz5n8GPODs2bP4pBmMjY3xypOin3HUMUhhiRyyoyGDnMhGQwZXlhu8IZOWloa3nKFmOYItdJDLIcZRxyAF0WjI4MpNoyEz5EIGAMmNh+nDrPy/AAAAAElFTkSuQmCC")!important;padding-left:var(--fr-input-padding-left,43px)!important}#${def.id.fontList} .${def.class.selectFontID} dl>dt{all:initial;display:none;padding:8px;border-radius:4px;border:1px solid #e51111;background:#e51111;word-break:break-all;color:#efea11;font-size:15px;cursor:progress}@-moz-document url-prefix() {#${def.id.fontList} .${def.class.selectFontID} input{padding:1px 24px 1px 0px!important}#${def.id.fontList} .${def.class.selectFontID} input:focus:not(:placeholder-shown){padding:1px 8px 1px 0px!important}#${def.id.container} .${def.const.seed}\\.dialog\\.scrollbar{padding:0 4px 0 2px}#${def.id.container} .${def.const.seed}\\.dialog\\.scrollbar,#${def.id.fontList} .${def.class.selector},#${def.id.fontList} .${def.class.selectFontID} dl,#${def.id.fontCss} textarea,#${def.id.fontEx} textarea{scrollbar-color: #c3cdddff #f1f0f012;scrollbar-width:thin}}`,
         frSlider:
           `:host(.${def.class.range}){--primary-color:#67a5df;--value-offset-y:var(--ticks-gap);--value-active-color:#fff;--value-background:transparent;--value-background-hover:var(--primary-color);--value-font:italic 700 14px/14px ui-monospace,Consolas,monospace;--fill-color:var(--primary-color);--progress-background:#dfdfdf;--progress-radius:20px;--show-min-max:none;--track-height:calc(var(--thumb-size) / 2);--min-max-font:12px serif;--min-max-opacity:0.5;--min-max-x-offset:10%;--thumb-size:22px;--thumb-color:#fff;--thumb-shadow:0 0 3px #00000066,0 0 1px #00000080 inset,0 0 0 99px var(--thumb-color) inset;--thumb-shadow-active:0 0 0 calc(var(--thumb-size) / 4) inset var(--thumb-color),0 0 0 99px var(--primary-color) inset,0 0 3px #00000066;--thumb-shadow-hover:0 0 0 calc(var(--thumb-size) / 4) inset var(--thumb-color),0 0 0 99px #ff8c00 inset,0 0 3px #00000066;--ticks-thickness:1px;--ticks-height:5px;--ticks-gap:var(--ticks-height, 0);--ticks-color:transparent;--ticks-count:(var(--max) - var(--min))/var(--step);--maxTicksAllowed:1000;--too-many-ticks:Min(1, Max(var(--ticks-count) - var(--maxTicksAllowed), 0));--x-step:Max(var(--step), var(--too-many-ticks) * (var(--max) - var(--min)));--tickIntervalPerc_1:Calc((var(--max) - var(--min)) / var(--x-step));--tickIntervalPerc:calc((100% - var(--thumb-size)) / var(--tickIntervalPerc_1) * var(--tickEvery, 1));--value-a:Clamp(var(--min), var(--value, 0), var(--max));--value-b:var(--value, 0);--text-value-a:var(--text-value, "");--completed-a:calc((var(--value-a) - var(--min)) / (var(--max) - var(--min)) * 100);--completed-b:calc((var(--value-b) - var(--min)) / (var(--max) - var(--min)) * 100);width:auto;min-width:105%!important;margin:-3px 0 0 -7px;box-sizing:content-box;display:inline-block;height:Max(var(--track-height),var(--thumb-size));background:linear-gradient(to right,var(--ticks-color) var(--ticks-thickness),transparent 1px) repeat-x;background-color:transparent;background-size:var(--tickIntervalPerc) var(--ticks-height);background-position-x:calc(var(--thumb-size)/ 2 - var(--ticks-thickness)/ 2);background-position-y:var(--flip-y,bottom);padding-bottom:var(--flip-y,var(--ticks-gap));padding-top:calc(var(--flip-y) * var(--ticks-gap));position:relative;z-index:1;--ca:Min(var(--completed-a), var(--completed-b));--cb:Max(var(--completed-a), var(--completed-b));--thumbs-too-close:Clamp(-1, 1000 * (Min(1, Max(var(--cb) - var(--ca) - 5, -1)) + 0.001), 1);` +
           `--thumb-close-to-min:Min(1, Max(var(--ca) - 5, 0));--thumb-close-to-max:Min(1, Max(95 - var(--cb), 0))}:host(.${def.class.range}[disabled]){filter:grayscale(0.9);}:host(.${def.class.range}[data-ticks-position=top]){--flip-y:1}:host(.${def.class.range}::after),:host(.${def.class.range}::before){--offset:calc(var(--thumb-size) / 2);content:counter(x);display:var(--show-min-max,block);font:var(--min-max-font);position:absolute;bottom:var(--flip-y,-2.5ch);top:calc(-2.5ch * var(--flip-y));opacity:Clamp(0,var(--at-edge),var(--min-max-opacity));transform:translateX(calc(var(--min-max-x-offset) * var(--before,-1) * -1)) scale(var(--at-edge));pointer-events:none}:host(.${def.class.range}::before){--before:1;--at-edge:var(--thumb-close-to-min);counter-reset:x var(--min);left:var(--offset)}:host(.${def.class.range}::after){--at-edge:var(--thumb-close-to-max);counter-reset:x var(--max);right:var(--offset)}.${def.class.rangeProgress}{--start-end:calc(var(--thumb-size) / 2);--clip-end:calc(100% - (var(--cb)) * 1%);--clip-start:calc(var(--ca) * 1%);--clip:inset(-20px var(--clip-end) -20px var(--clip-start));position:absolute;left:var(--start-end);right:var(--start-end);top:calc(var(--ticks-gap) * var(--flip-y,0) + var(--thumb-size)/ 2 - var(--track-height)/ 2);height:calc(var(--track-height));background:var(--progress-background,#eee);pointer-events:none;z-index:-1;border-radius:var(--progress-radius)}.${def.class.rangeProgress}::before{content:"";position:absolute;left:0;right:0;clip-path:var(--clip);top:0;bottom:0;background:var(--fill-color,#000);box-shadow:var(--progress-flll-shadow);z-index:1;border-radius:inherit}.${def.class.rangeProgress}::after{content:"";position:absolute;top:0;right:0;bottom:0;left:0;box-shadow:var(--progress-shadow);pointer-events:none;border-radius:inherit}:host(.${def.class.range})>input:only-of-type~.${def.class.rangeProgress}{--clip-start:0}:host(.${def.class.range})>input::-webkit-slider-runnable-track{background:transparent!important;box-shadow:none!important;border:none!important}:host(.${def.class.range})>input{-webkit-appearance:none;box-shadow:none!important;width:100%;height:var(--thumb-size)!important;margin:0!important;padding:0!important;position:absolute!important;left:0;top:calc(50% - Max(var(--track-height),var(--thumb-size))/ 2 + calc(var(--ticks-gap)/ 2 * var(--flip-y,-1)))!important;border:0!important;cursor:grab;outline:0!important;background:0 0!important;--thumb-shadow:var(--thumb-shadow-active)}` +
@@ -946,7 +900,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
 
       class ReadyStateEventsRegistry {
         constructor() {
-          safeObject.assign(this, { functionsToRun: [], finalFunctionsToRun: [], isRegistered: false });
+          safeObject.assign(this, { functionsToRun: [], finalFunctionsToRun: [], isRegistered: false, interactiveHandled: false, isLoaded: false });
           this.loadedHandler = this._runFunctions.bind(this, this.finalFunctionsToRun);
           this.loadingHandler = this._runFunctions.bind(this, this.functionsToRun);
           this._registeringEventListeners();
@@ -965,17 +919,18 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           return !INFO(this.info, fullStyle(background), "color:0", remarkStyle("0"), remarkStyle("#a9a9a9"));
         }
         _asyncLoadHandler() {
-          sleep(6e2)(2e2).then(t => sleep(t)(this.loadingHandler("#2160b7", "[DOC.LOAD]", "preparing")).then(() => this.loadedHandler("#008080", "[DOC.LOAD]")));
+          sleep(6e2)(2e2).then(t => sleep(t)(this.loadingHandler("#2160b7", "[DOC.LOAD]", "preparation")).then(() => this.loadedHandler("#008080", "[DOC.LOAD]")));
         }
-        _registeringEventListeners() {
+        _registeringEventListeners(startTime = performance.now()) {
           if (this.isRegistered || IS_GREASEMONKEY) return !this.isRegistered && this._asyncLoadHandler();
-          const readyStateStep = () => {
+          const readyStateStep = timestamp => {
+            const currentTime = typeof timestamp === "number" ? timestamp : performance.now();
             document.readyState === "interactive" && !this.interactiveHandled && (this.interactiveHandled = true) && this.loadingHandler("#6a5acd");
             Boolean(document.readyState === "complete" && !this.isLoaded && (this.isLoaded = true) && this.loadedHandler("#008000")) &&
-              sleep(0)(this.interactiveHandled).then(handled => !handled && this.loadingHandler("#4682b4", void 0, "compensated"));
-            !this.isLoaded && GMunsafeWindow[def.const.raf](readyStateStep);
+              sleep(0)(this.interactiveHandled).then(handled => !handled && this.loadingHandler("#4682b4", void 0, "compensation"));
+            if (!this.isLoaded && currentTime - startTime < 3e4) GMunsafeWindow[def.const.raf](readyStateStep);
           };
-          return GMunsafeWindow[def.const.raf](readyStateStep), (this.isRegistered = true);
+          (this.isRegistered = true) && GMunsafeWindow[def.const.raf](readyStateStep);
         }
         addFn(fn, ...args) {
           return typeof fn === "function" && this.functionsToRun.push({ fn, args });
@@ -987,61 +942,65 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
 
       /* FR_DIALOGBOX_CLASS */
 
-      let setAdoptedStyleSheets = (...args) => (setAdoptedStyleSheets = IS_ADOPTEDSTYLESHEET_MUTABLE ? updateAdoptedStyleSheets : updateInternalStyle)(...args);
       const frDialogBoxCssText = String(hostStyle("fr-dialogbox") + def.var.style.shared + def.var.style.frDialogBox);
       class FrDialogBox {
         constructor({ titleText = "Test", messageText = "Test message.", trueButtonText = "OK", falseButtonText = null, neutralButtonText = null } = {}) {
           safeObject.assign(this, { cssText: frDialogBoxCssText, titleText, messageText, trueButtonText, falseButtonText, neutralButtonText });
           safeObject.assign(this, { hasFalse: falseButtonText !== null, hasNeutral: neutralButtonText !== null, parent: document.documentElement });
-          this._create(this);
-          this._append();
+          void (FrDialogBox.closure(), this._create(), this._append(), FrDialogBox._instances.add(this));
         }
         static closure() {
-          return safeRemoveNode(`#${def.id.dialogbox}`);
+          FrDialogBox._instances.forEach(instance => instance._destroy(null, true));
+          FrDialogBox._instances.clear();
         }
-        _create(context) {
+        _create() {
+          if (def.count.dialog && !def.count.dialog.signal.aborted) def.count.dialog.abort("FrDialogBox.create");
+          def.count.dialog = new AbortController();
+          this.signal = def.count.dialog.signal;
           this.container = cE("fr-dialogbox", { id: def.id.dialogbox });
-          const shadow = (def.var.dialogIf = aS(this.container));
-          setAdoptedStyleSheets({ target: shadow, css: this.cssText, id: `${def.const.seed}-dialogbox`, media: "all", writable: false, minor: true });
+          this.shadow = createShadowRoot(this.container);
+          setAdoptedStyleSheets({ target: this.shadow, css: this.cssText, id: `${def.const.seed}-dialogbox`, media: "all", writable: false, minor: true });
           this.frDialog = cE("fr-box", { class: def.class.db });
-          appendNode(shadow, this.frDialog);
+          appendNode(this.shadow, this.frDialog);
           const titleHtml = `${this.titleText}<span id="${def.const.seed}.dialog.close" title="${IS_CHN ? "关闭" : "Close"}">&times;</span>`;
           const title = cE("fr-title", { class: def.class.dbt, innerHTML: tTP.createHTML(titleHtml) });
           const message = cE("fr-message", { class: def.class.dbm, innerHTML: tTP.createHTML(this.messageText) });
           const buttonContainer = cE("fr-buttons", { class: def.class.dbbc });
           appendNode(this.frDialog, title, message, buttonContainer);
+          const closeBtn = qS(`#${def.const.seed}\\.dialog\\.close`, this.shadow);
+          eventManager.add(closeBtn, "click", () => this._destroy(null, true), { signal: this.signal });
           this.trueButton = cE("button", { class: [def.class.dbb, def.class.dbbt], textContent: this.trueButtonText });
-          [this.trueButton, qS(`#${def.const.seed}\\.dialog\\.close`, shadow)].forEach(c => c?.addEventListener("click", () => void context._destroy()));
+          eventManager.add(this.trueButton, "click", () => this._destroy(true), { signal: this.signal });
           appendNode(buttonContainer, this.trueButton);
           if (this.hasFalse) {
             this.falseButton = cE("button", { class: [def.class.dbb, def.class.dbbf], textContent: this.falseButtonText });
-            this.falseButton.addEventListener("click", () => void context._destroy());
+            eventManager.add(this.falseButton, "click", () => this._destroy(false), { signal: this.signal });
             appendNode(buttonContainer, this.falseButton);
           }
           if (this.hasNeutral) {
             this.neutralButton = cE("button", { class: [def.class.dbb, def.class.dbbn], textContent: this.neutralButtonText });
-            this.neutralButton.addEventListener("click", () => void context._destroy());
+            eventManager.add(this.neutralButton, "click", () => this._destroy(null, true), { signal: this.signal });
             appendNode(buttonContainer, this.neutralButton);
           }
         }
         _append() {
-          if (!CUR_WINDOW_TOP || !this.container || !FrDialogBox.closure()) return;
-          this.root = createDialogModel(this.container, this.parent);
-          sleep(2e2).then(() => this.frDialog.classList.add(`${def.const.seed}.opac:1`));
+          if (!CUR_WINDOW_TOP || !this.container) return;
+          createDialogModel(this.container, this.parent);
+          this.container && this.frDialog && this.frDialog.classList.add(`${def.const.seed}.opac:1`);
         }
-        _destroy() {
-          if (!this.container) return;
-          this.frDialog.classList.remove(`${def.const.seed}.opac:1`);
-          if (safeRemoveNode(this.container) && !qS("fr-configure")) closeDialogModel(this.root);
+        _destroy(value, isNeutral = false) {
+          if (this._resolvePromise) void (isNeutral ? this._rejectPromise() : this._resolvePromise(value), (this._rejectPromise = this._resolvePromise = null));
+          void (this.frDialog?.classList.remove(`${def.const.seed}.opac:1`), def.count.dialog?.abort("FrDialogBox.destroy"), FrDialogBox._instances.delete(this));
+          if (((this.container.textContent = ""), safeRemoveNode(this.container)) && !qS("fr-configure")) closeDialogModel();
+          this.trueButton = this.falseButton = this.neutralButton = this.frDialog = this.shadow = this.container = null;
         }
         async respond() {
           return new Promise((resolve, reject) => {
-            if (!this.frDialog || !this.trueButton) reject(new Error("FrDialogBox not exist!"));
-            this.trueButton.addEventListener("click", () => void resolve(true));
-            if (this.hasFalse) this.falseButton.addEventListener("click", () => void resolve(false));
-          }).catch(e => void ERROR(`${e.name} in FrDialogBox:`, e.message));
+            this.frDialog && this.trueButton ? void ((this._resolvePromise = resolve), (this._rejectPromise = reject)) : reject();
+          }).catch(() => new Promise(() => { }));
         }
       }
+      FrDialogBox._instances = new Set();
 
       function createDialogModel(container, parent) {
         setAdoptedStyleSheets({ target: document, css: def.var.style.frDialog, id: def.id.dialogStyle, media: "all", writable: false, minor: true });
@@ -1050,14 +1009,14 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           appendNode(dialog, container);
           dialog.hasAttribute("open") && dialog.close?.();
           (dialog.inert = true) && dialog.showModal?.();
-          dialog.removeAttribute("inert");
-          dialog.focus();
+          dialog.removeAttribute("inert") ?? dialog.focus();
         }
         return dialog;
       }
 
-      function closeDialogModel(dialog) {
-        return dialog?.close?.(), document.removeEventListener("blur", stopEventPropagation, true), safeRemoveNode(dialog || `dialog#${def.const.dialog}`);
+      function closeDialogModel() {
+        eventManager.remove(document, "blur", stopEventPropagation, true);
+        return def.count.dialog?.abort("closeDialogModel") ?? def.count.panel?.abort("closeDialogModel") ?? safeRemoveNode(`dialog#${def.const.dialog}`);
       }
 
       function compareVersion({ WEBKIT = NaN, BLINK = NaN, GECKO = NaN, more = true } = {}) {
@@ -1066,65 +1025,61 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
         return (IS_REAL_WEBKIT && compare(WEBKIT)) || (IS_REAL_BLINK && compare(BLINK)) || (IS_REAL_GECKO && compare(GECKO));
       }
 
-      function createStyleSheet(id, css, media, writable, primary) {
-        const sheet = new CSSStyleSheet();
-        const metadata = `:host(sheet-metadata){--sheet-metadata:${JSON.stringify({ id, ...(primary && { [def.const.cssAttrName]: Boolean(writable) }) })};}`;
-        const cssText = tTP.createScript(css.replace(/^\s*:host\(sheet-metadata\)\s*\{\s*.+?;\s*\}\s*/, ""));
-        return sheet.media.appendMedium(media), sheet.replaceSync(cssText), sheet.insertRule(metadata, 0), sheet;
+      function setAdoptedStyleSheets(options) {
+        const useAdopted = IS_ADOPTEDSTYLESHEET_MUTABLE && !options.forceStyle;
+        return useAdopted ? updateAdoptedStyleSheets(options) : updateInternalStyle(options);
       }
 
-      function getSheetMetadata(sheet) {
-        const rootRule = sheet.cssRules?.[0];
-        if (rootRule?.selectorText !== ":host(sheet-metadata)") return object();
-        const rawValue = rootRule.style.getPropertyValue("--sheet-metadata");
-        return rawValue ? (sheet.disabled = false) || JSON.parse(rawValue.trim()) : object();
-      }
-
-      function getMainStyleSheets({ primary = false, target = document, forceStyle = false, preset = {} }) {
-        const ATTR_REGEX = /^fr-css-[0-9a-f]{8}$/;
+      function getStyleSheets({ primary = false, target = document, forceStyle = false, preset = {} }) {
+        const regexp = /^fr-css-[0-9a-f]{8}$/;
         if (IS_ADOPTEDSTYLESHEET_MUTABLE && !forceStyle) {
-          if (primary) return asArray(target.adoptedStyleSheets).FindX(s => getSheetMetadata(s).id === def.id.rndStyle);
-          const fn = s => (preset.minor ? getSheetMetadata(s).id === preset.id : asArray(safeObject.keys(getSheetMetadata(s))).SomeX(n => ATTR_REGEX.test(n)));
-          return arrayFrom(target.adoptedStyleSheets).filter(fn);
-        } else {
-          if (primary) return qS(`style#${def.id.rndStyle}`, document.head);
-          const fn = s => (preset.minor ? s.id === preset.id : asArray(s.getAttributeNames()).SomeX(n => ATTR_REGEX.test(n)));
-          return qA("style[id]", isShadow(target) ? target : target.head).filter(fn);
+          if (def.map.sheets.size > 0) def.map.sheets.forEach((_, n) => n && n.nodeType && !n.isConnected && def.map.sheets.delete(n));
+          const registry = def.map.sheets.get(target);
+          if (!registry) return [];
+          const tid = primary ? def.id.rndStyle : preset.minor ? preset.id : null;
+          if (tid) return registry.has(tid) ? [{ id: tid, sheet: registry.get(tid).sheet }] : [];
+          return [...registry.values()].reduce((acc, info) => (asArray(Object.keys(info)).SomeX(n => regexp.test(n)) && acc.push({ id: info.id, sheet: info.sheet }), acc), []);
         }
+        if (primary) return (el => (el ? [{ id: def.id.rndStyle, sheet: el.sheet, el }] : []))(qS(`style#${def.id.rndStyle}`, document.head));
+        const fn = s => ((preset.minor ? s.id === preset.id : asArray(s.getAttributeNames()).SomeX(n => regexp.test(n))) ? [{ id: s.id, sheet: s.sheet, el: s }] : []);
+        return qA("style[id]", isShadow(target) ? target : target?.head || null).flatMap(fn);
       }
 
-      function updateAdoptedStyleSheets({ target, css, id, media = "screen", writable = true, primary = false, minor = false, forceStyle = false }) {
+      function updateAdoptedStyleSheets({ target, css, id, media = "screen", writable = true, primary = false, minor = false }) {
         try {
-          const existSheets = getMainStyleSheets({ target, forceStyle, preset: { minor, id } });
-          if (writable && existSheets.length) target.adoptedStyleSheets = arrayFrom(target.adoptedStyleSheets).filter(s => !existSheets.includes(s));
-          else if (existSheets.length > 0) return true;
-          const newStyleSheet = createStyleSheet(id, css, media, writable, primary);
-          return target.adoptedStyleSheets.push(newStyleSheet) && true;
+          const exist = getStyleSheets({ target, preset: { minor, id }, primary })[0];
+          if (exist && !writable) return true;
+          if (!def.map.sheets.has(target)) def.map.sheets.set(target, new Map());
+          const registry = def.map.sheets.get(target);
+          const option = primary && { [def.const.cssAttrName]: Boolean(writable) };
+          if (exist?.sheet?.replaceSync) return exist.sheet.replaceSync(tTP.createHTML(css)), registry.set(id, { ...exist, ...option }), true;
+          const sheet = new CSSStyleSheet();
+          void (sheet.media.appendMedium(media), sheet.replaceSync(tTP.createHTML(css)), target.adoptedStyleSheets.push(sheet));
+          return registry.set(id, { id, sheet, el: null, ...option }), true;
         } catch (e) {
-          ERROR(`${e.name} in UpdateAdoptedStyleSheets:`, e.message);
+          ERROR(`${e.name} in updateAdoptedStyleSheets:`, e.message);
         }
       }
 
       function updateInternalStyle({ target, css, id, media = "screen", writable = true, primary = false, minor = false, forceStyle = false }) {
         try {
-          const existStyles = getMainStyleSheets({ target, forceStyle, preset: { minor, id } });
-          if (writable) existStyles.forEach(style => (style.dataset.frRemoved = true) && safeRemoveNode(style));
+          const existStyles = getStyleSheets({ target, forceStyle, preset: { minor, id } });
+          if (writable) existStyles.forEach(({ el }) => (el.dataset.frRemoved = true) && safeRemoveNode(el));
           else if (existStyles.length > 0) return true;
-          const options = { id, media, type: "text/css", textContent: css, ...(primary && { [def.const.cssAttrName]: Boolean(writable) }) };
-          return target && GMaddElement(isShadow(target) ? target : target.head, "style", options), true;
+          const option = { id, media, type: "text/css", textContent: css, ...(primary && { [def.const.cssAttrName]: Boolean(writable) }) };
+          return GMaddElement(isShadow(target) ? target : target?.head || null, "style", option), true;
         } catch (e) {
           ERROR(`${e.name} in UpdateInlineStyle:`, e.message);
         }
       }
 
       function checkBlinkCheatingUA(uad) {
-        if (!IS_REAL_BLINK) return false;
-        return (global.isSecureContext && !uad) || (uad && toString(uad) !== "[object NavigatorUAData]");
+        return (global.isSecureContext && !uad) || (uad && oS.call(uad) !== "[object NavigatorUAData]");
       }
 
-      function getscaleValueMatrix(scaleMatrix) {
-        const [o, t] = (def.array.scaleMatrix = scaleMatrix.slice(-2));
-        return { prev: o || 1, cur: t || 1 };
+      function updateScaleValueMatrix(newValue) {
+        def.count.matrix = { prev: def.count.matrix.cur, cur: newValue || 1 };
+        return (def.var.curScale = def.count.matrix.cur);
       }
 
       class SecureCipherSuite {
@@ -1163,13 +1118,15 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
       function dataDownload(fileName, data) {
         const url = URL.createObjectURL(new Blob([encrypt(toString(data))], { type: "text/plain;charset=utf-8" }));
         const link = cE("a", { href: url, download: fileName });
-        link.click();
-        URL.revokeObjectURL(url);
+        sleep(0, { useCachedSetTimeout: true })(link.click()).then(() => URL.revokeObjectURL(url));
       }
 
       /* SCALE_COORDINATE_CORRECTION_FUNCTION */
 
-      function adjustCoordinateOffset({ cur, prev = 1, props, results = debugging && new Set() }) {
+      const originGetClientRects = Element.prototype.getClientRects;
+      const originGetBoundingClientRect = Element.prototype.getBoundingClientRect;
+      const originGetScreenCTM = SVGGraphicsElement.prototype.getScreenCTM;
+      function adjustCoordinateOffset({ cur, prev = 1, props }) {
         if (!CUR_WINDOW_TOP && (compareVersion({ BLINK: 128 }) || compareVersion({ GECKO: 126, more: null }))) return;
         const eventPropertiesMap = [
           { objs: [MouseEvent.prototype], props: ["clientX", "clientY", "pageX", "pageY", "layerX", "layerY", "offsetX", "offsetY", "x", "y"] },
@@ -1177,76 +1134,75 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           { objs: [Element.prototype], props: ["scrollLeft", "scrollTop", ...props.element] },
           { objs: [HTMLElement.prototype], props: [...props.html] },
         ];
-        const processProps = ({ objs, props }) => {
-          const [uO, uP] = [objs, props].map(o => uniq(o));
-          uO.flatMap(obj => uP.map(prop => ({ obj, prop }))).forEach(({ obj, prop }) => definePropertyProcess(obj, prop, Reflect.getOwnPropertyDescriptor(obj, prop)));
-        };
-        safeObject.assign(global, { frDOMRects: { toggle: compareVersion({ BLINK: 128 }) || IS_REAL_GECKO, cur, prev } });
-        try {
-          eventPropertiesMap.forEach(processProps);
-          if (IS_REAL_BLINK) overrideGetScreenCTM(SVGGraphicsElement.prototype);
-          if (global.frDOMRects.toggle) overrideGetDOMRects(Element.prototype);
-          DEBUG(`[FONTSCALE|OFFSET]${IN_FRAMES}[R:%s]: %O`, (cur / prev).toFixed(3), results || "succeed!");
-        } catch (e) {
-          ERROR(`${e.name} in AdjustCoordinateOffset:`, e.message);
-        }
-
-        function definePropertyProcess(obj, prop, descriptor) {
+        const definePropertyProcess = function (obj, prop, descriptor) {
           if (!descriptor || typeof descriptor.get !== "function") return;
           const isScrollProp = "scrollLeft" === prop || "scrollTop" === prop;
           const target = isScrollProp ? HTMLHtmlElement.prototype : obj;
           const scale = isScrollProp ? cur : cur / prev;
+          if (descriptor.get && descriptor.get.frStorage) {
+            if (isScrollProp) descriptor.get.frStorage.scale = cur;
+            else descriptor.get.frStorage.scale *= scale;
+            return;
+          }
+          const storage = { scale: scale, rawGet: descriptor.get };
           const value = {
             configurable: true,
-            enumerable: true,
-            get() {
-              return descriptor.get.call(this) / scale;
+            enumerable: descriptor.enumerable,
+            get: function () {
+              return storage.rawGet.call(this) / storage.scale;
             },
           };
+          Reflect.defineProperty(value.get, "frStorage", { value: storage, configurable: true });
           isScrollProp &&
             (value.set = function (Value) {
               if (Number.isFinite(Value)) this.scrollTo({ [prop === "scrollLeft" ? "left" : "top"]: Value * scale });
             });
-          try {
-            Reflect.defineProperty(target, prop, value) && debugging && results.add({ obj: getObjectType.call(target), prop });
-          } catch (e) {
-            ERROR(`${e.name} in definePropertyProcess '${prop}':`, e.message);
-          }
-        }
-
-        function overrideGetScreenCTM(svg) {
+          Reflect.defineProperty(target, prop, value);
+        };
+        const processProps = ({ objs, props }) => {
+          const [uO, uP] = [objs, props].map(o => uniq(o));
+          uO.flatMap(obj => uP.map(prop => ({ obj, prop }))).forEach(({ obj, prop }) => definePropertyProcess(obj, prop, Reflect.getOwnPropertyDescriptor(obj, prop)));
+        };
+        const overrideGetScreenCTM = function (svg) {
           Reflect.defineProperty(svg, "getScreenCTM", {
+            configurable: true,
             value: function () {
-              const originalMatrix = def.const.getScreenCTM.call(this);
-              const newSVGMatrix = this.ownerSVGElement?.createSVGMatrix() ?? document.createElementNS("http://www.w3.org/2000/svg", "svg").createSVGMatrix();
+              const originalMatrix = originGetScreenCTM.call(this);
+              const newSVGMatrix = this.ownerSVGElement?.createSVGMatrix() ?? document.createElementNS("w3.org", "svg").createSVGMatrix();
               return safeObject.assign(newSVGMatrix, ...["a", "b", "c", "d", "e", "f"].map(prop => ({ [prop]: originalMatrix[prop] / cur })));
             },
           });
-          debugging && results.add({ obj: getObjectType.call(svg), prop: "getScreenCTM()" });
-        }
-
-        function overrideGetDOMRects(element) {
-          Reflect.defineProperty(element, "getClientRects", { value: overrideGetClientRects });
-          Reflect.defineProperty(element, "getBoundingClientRect", { value: overrideGetBoundingClientRect });
-          debugging && results.add({ obj: getObjectType.call(element), prop: "getDOMRects" });
-        }
-
-        function createRect(T, scale = 1 / cur) {
+        };
+        const createRect = function (T, scale = 1 / cur) {
           const r = DOMRect.fromRect(T);
           return new DOMRect(r.x * scale, r.y * scale, r.width * scale, r.height * scale);
-        }
-
-        function overrideGetClientRects() {
-          const rects = arrayFrom(def.const.getClientRects.call(this), rect => createRect(rect));
-          rects.item = index => rects[index] ?? null;
-          rects[Symbol.iterator] = function* iterator() {
-            for (let i = 0; i < this.length; i++) yield this[i];
-          };
-          return safeObject.freeze(rects);
-        }
-
-        function overrideGetBoundingClientRect() {
-          return createRect(def.const.getBoundingClientRect.call(this));
+        };
+        const overrideGetDOMRects = function (element) {
+          Reflect.defineProperty(element, "getClientRects", {
+            configurable: true,
+            value: function () {
+              const rects = arrayFrom(originGetClientRects.call(this), rect => createRect(rect));
+              rects.item = index => rects[index] ?? null;
+              rects[Symbol.iterator] = function* iterator() {
+                for (let i = 0; i < this.length; i++) yield this[i];
+              };
+              return safeObject.freeze(rects);
+            },
+          });
+          Reflect.defineProperty(element, "getBoundingClientRect", {
+            configurable: true,
+            value: function () {
+              return createRect(originGetBoundingClientRect.call(this));
+            },
+          });
+        };
+        try {
+          safeObject.assign(global, { frDOMRects: { toggle: compareVersion({ BLINK: 128 }) || IS_REAL_GECKO, cur, prev } });
+          eventPropertiesMap.forEach(processProps) || DEBUG(`[FONTSCALE][RATIO:${cur.toFixed(3)}]${IN_FRAMES}: succeed`);
+          if (IS_REAL_BLINK) overrideGetScreenCTM(SVGGraphicsElement.prototype);
+          if (global.frDOMRects.toggle) overrideGetDOMRects(Element.prototype);
+        } catch (e) {
+          ERROR(`${e.name} in AdjustCoordinateOffset:`, e.message);
         }
       }
 
@@ -1254,7 +1210,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
 
       const cache = {
         value: (data, eT) => ({ data, expired: Date.now() + (typeof eT === "number" ? eT : 6048e5) }),
-        set: (key, ...options) => void GMsetValue(key, encrypt(JSON.stringify(cache.value(...options)))),
+        set: async (key, ...options) => await GMsetValue(key, encrypt(JSON.stringify(cache.value(...options)))),
         get: async key => {
           const savedValue = await GMgetValue(key);
           if (!savedValue) return;
@@ -1267,53 +1223,47 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
             cache.remove(key);
           }
         },
-        remove: key => void GMdeleteValue(key),
+        remove: async key => await GMdeleteValue(key),
       };
 
       class FontFaceSetObserver {
         constructor() {
-          safeObject.assign(this, { canvasWidth: 200, canvasHeight: 100, fontSize: 80, fontText: "Aa啊", originFont: "'Courier New',Courier,monospace", detectFontData: null });
-          this.canvasContext = this._createCanvasContext();
+          safeObject.assign(this, { canvasWidth: 200, canvasHeight: 100, fontSize: 80, fontText: "Aa啊", originFont: "'Courier New',Courier,monospace" });
+          this.canvas = cE("canvas", { width: this.canvasWidth, height: this.canvasHeight });
+          this.canvasContext = this.canvas.getContext("2d", { willReadFrequently: true });
+          safeObject.assign(this.canvasContext, { frFontFace: true, fillStyle: "#000", textAlign: "center", textBaseline: "middle" });
           this.originFontData = this._checkFont(this.originFont);
         }
         static checkCanvasFingerprintProtection() {
-          const canvas = cE("canvas").getContext("2d");
-          const { data } = ((canvas.fillStyle = "#000"), canvas.fillRect(0, 0, 50, 50), canvas.getImageData(0, 0, 50, 50));
-          const checkData = (data, i) => data[i] !== 0 || data[i + 1] !== 0 || data[i + 2] !== 0 || data[i + 3] !== 255;
-          for (let i = 0; i < data.length; i += 4) if (checkData(data, i)) return (FontFaceSetObserver.checkCanvasFingerprintProtection = () => true), true;
-          return (FontFaceSetObserver.checkCanvasFingerprintProtection = () => false), false;
+          const ctx = cE("canvas").getContext("2d");
+          const { data } = ((ctx.fillStyle = "#000"), ctx.fillRect(0, 0, 50, 50), ctx.getImageData(0, 0, 50, 50));
+          const isPrt = asArray(data).SomeX((v, i) => (i % 4 === 3 ? v !== 255 : v !== 0));
+          return (FontFaceSetObserver.checkCanvasFingerprintProtection = () => isPrt), isPrt;
         }
-        _createCanvasContext() {
-          const canvas = cE("canvas", { width: this.canvasWidth, height: this.canvasHeight });
-          const canvasContext = canvas.getContext("2d", { willReadFrequently: true });
-          safeObject.assign(canvasContext, { frFontFace: true, fillStyle: "#000", textAlign: "center", textBaseline: "middle" });
-          return canvasContext;
-        }
-        _checkFont(fontName) {
+        _checkFont(name, hash = 0) {
           try {
             this.canvasContext.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
-            const fontFamily = this.originFont.toUpperCase() === fontName.toUpperCase() ? this.originFont : `'${fontName}',${this.originFont}`;
-            this.canvasContext.font = `${this.fontSize}px ${fontFamily}`;
+            this.canvasContext.font = `${this.fontSize}px ${this.originFont.toUpperCase() === name.toUpperCase() ? this.originFont : `'${name}',${this.originFont}`}`;
             this.canvasContext.fillText(this.fontText, this.canvasWidth / 2, this.canvasHeight / 2);
-            const { data: fontData } = this.canvasContext.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
+            const { data } = this.canvasContext.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
             const { actualBoundingBoxLeft: l, actualBoundingBoxRight: r } = this.canvasContext.measureText(this.fontText);
-            return { fontData: arrayFrom(fontData).filter(Boolean).join(), fontWidth: l + r };
+            for (let i = 0; i < data.length; i++) hash = data[i] ? ((hash << 5) - hash + data[i]) | 0 : hash;
+            return { fontData: hash, fontWidth: l + r };
           } catch (e) {
-            ERROR(`${e.name} in FontFaceSetObserver.checkFont:`, e.message);
+            return ERROR(`${e.name} in FontFaceSetObserver.checkFont:`, e.message);
           }
         }
-        _unescape(input) {
-          return input.replace(/\\[\dA-F]{4}/g, match => String.fromCharCode(parseInt(match.substr(1), 16)));
-        }
         destroy() {
-          this.canvasContext = this.detectFontData = this.originFontData = null;
+          if (this.canvas) this.canvas.width = this.canvas.height = 0;
+          this.canvas = this.canvasContext = this.detectFontData = this.originFontData = null;
         }
         detect(font) {
-          if (typeof font !== "string" || !font) return false;
+          if (!font || typeof font !== "string") return false;
           if (this.originFont.toUpperCase().includes(font.toUpperCase())) return true;
           if (!(this.detectFontData = this._checkFont(font))) return false;
-          const fontSupport = this.originFontData.fontData !== this.detectFontData.fontData && this.originFontData.fontWidth !== this.detectFontData.fontWidth;
-          return fontSupport && !DEBUG("detect Fonts: <Detected>", { data: this.detectFontData, font: this._unescape(font) });
+          const isSupport = this.originFontData.fontData !== this.detectFontData.fontData && this.originFontData.fontWidth !== this.detectFontData.fontWidth;
+          const unescaped = font.replace(/\\[\dA-F]{4}/g, m => String.fromCharCode(parseInt(m.slice(1), 16)));
+          return isSupport && !DEBUG("detect Fonts: <Detected>", { data: this.detectFontData, font: unescaped });
         }
       }
 
@@ -1346,9 +1296,8 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
       }
 
       function getNonDuplicateFontArray(arra, arrb) {
-        const arrbSet = new Set();
-        arrayFrom(arrb).forEach(item => (arrbSet.add(item.en), arrbSet.add(item.ch)));
-        return arrayFrom(arra).filter(x => !arrbSet.has(x.en) && !arrbSet.has(x.ch));
+        const forbiddenKeys = new Set(arrb.flatMap(item => [item.en, item.ch]).filter(Boolean));
+        return arra.filter(x => !forbiddenKeys.has(x.en) && !forbiddenKeys.has(x.ch));
       }
 
       function updateDomainsIndex(domains, curHost = CUR_HOST) {
@@ -1363,20 +1312,28 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
         return asArray(sites.flatMap(wildcardFn)).FindIndeX(site => (site instanceof RegExp && site.test(CUR_HOST)) || site === CUR_HOST);
       }
 
-      function saveData(key, data) {
+      function saveData(key, data, isStringify = true) {
         try {
           sessionStorage?.removeItem(def.static.conflict);
-          GMsetValue(key, encrypt(JSON.stringify(data)));
+          GMsetValue(key, isStringify ? encrypt(JSON.stringify(data)) : encrypt(data));
         } catch (e) {
           ERROR(`${e.name} in SaveData:`, e.message);
         }
       }
 
+      function copyToClipboard(text, type = "text/plain") {
+        if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+        const copyHandler = event => void (event.preventDefault(), event.clipboardData.setData(type, text), document.removeEventListener("copy", copyHandler, true));
+        document.addEventListener("copy", copyHandler, true);
+        document.execCommand("copy");
+      }
+
       function convertHtmlToText(htmlString) {
         if (typeof htmlString !== "string" || htmlString.trim().length === 0) return "";
-        const harmfulRegexp = /expression\s*(?=\()|url\s*(?=\()|@import(?=\s)|javascript\s*:|\\u[0-9a-fA-F]{4}|\\x[0-9a-fA-F]{2}|`|{|}/gi;
-        const temp = cE("fr-safeInner", { innerHTML: tTP.createHTML(htmlString.replace(harmfulRegexp, "")) });
-        return temp.textContent.trim().replace(/(\s*,\s*)+$/, "");
+        const harmfulRegexp = /(expression)+\s*(?=\()|(url)+\s*(?=\()|@import(?=\s)|(javascript)+\s*(?=:)|\\u[0-9a-fA-F]{4}|\\x[0-9a-fA-F]{2}|`|{|}/gi;
+        let temp = cE("fr-safeinner", { innerHTML: tTP.createHTML(htmlString.replace(harmfulRegexp, "")) });
+        const result = temp.textContent.trim().replace(/(\s*,\s*)+$/, "");
+        return (temp.textContent = "") || (temp = null) || result;
       }
 
       function matchEditorialSites(hostlist) {
@@ -1384,17 +1341,17 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
       }
 
       function getFontScaleValue(isAllowFontScale, scaleValue) {
-        def.array.scaleMatrix.push((def.var.curScale = isAllowFontScale && scaleValue >= 0.8 && scaleValue <= 2.5 ? scaleValue : INITIAL_VALUES.fontSize));
-        return Number(def.var.curScale).toFixed(3);
+        const curScale = updateScaleValueMatrix(isAllowFontScale && scaleValue >= 0.8 && scaleValue <= 2.5 ? scaleValue : INITIAL_VALUES.fontSize);
+        return Number(curScale).toFixed(3);
       }
 
       function getFontOverrideData(fontArray) {
         if (!safeArray.isArray(fontArray)) return [];
-        return fontArray.reduce((acc, font) => {
-          if (typeof font !== "string") return acc;
+        return fontArray.flatMap(font => {
+          if (typeof font !== "string") return [];
           const chsFont = font.match(/^{([^{}]+)}$/);
-          return acc.concat([chsFont ? convertToUnicode(chsFont[1]) : font]);
-        }, []);
+          return [chsFont ? convertToUnicode(chsFont[1]) : font];
+        });
       }
 
       async function setRootSelector() {
@@ -1402,13 +1359,14 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
         return !rootID || (!CUR_WINDOW_TOP && (compareVersion({ BLINK: 130, more: null }) || IS_GREASEMONKEY)) ? `:root ` : `:root#${rootID} `;
       }
 
-      async function getRenderRules(tmp) {
+      async function getRenderRules() {
         try {
           const response = await fetch(`${def.url.predefined}?${generateRandomString(32, "hex")}`);
           if (!response.ok) throw new Error(`Network response was not OK. Status: ${response.status}`);
           const text = await response.text();
-          if (!safeArray.isArray((tmp = JSON.parse(text))) || !(tmp = tmp.length)) return ERROR("Error: Invalid predefined data!");
-          return DEBUG(`Pull predefined data: %cSucceeded (${text.length}, ${tmp})`, "color:#008000"), text;
+          const parsedData = JSON.parse(text);
+          if (!safeArray.isArray(parsedData) || parsedData.length === 0) return ERROR("Error: Invalid predefined data!");
+          return DEBUG(`Pull predefined data: %cSucceeded (${text.length}, ${parsedData.length})`, "color:#008000"), text;
         } catch (e) {
           ERROR(`${e.name} in getRenderRules:`, e.message);
         }
@@ -1418,8 +1376,8 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
         if (!predefinedData) return data;
         try {
           const findFn = ([host]) => host.includes(CUR_HOST_NAME) || asArray(host).SomeX(h => h.startsWith("*") && CUR_HOST_NAME.endsWith(h.slice(1)));
-          const rules = asArray(JSON.parse(JSON.parse(decrypt(predefinedData)))).FindX(findFn);
-          if (!(def.var.apply = Boolean(rules))) return data;
+          const rules = asArray(JSON.parse(decrypt(predefinedData))).FindX(findFn);
+          if (!(def.var.apply = safeArray.isArray(rules))) return data;
           for (const [key, rule] of safeObject.entries(rules[1])) {
             if (!rule || !(key in data)) continue;
             const [action, param] = rule.split("∯", 2);
@@ -1437,8 +1395,9 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
       /* FONT_RENDERING_PREPROCESSING */
 
       void (async function (requestCodeAndFunc, getConfigureData, getCustomMonoData, getExSitesData, getFontSetData, getFontScaleDef, getFontOverrideDef, getFontProperty) {
+        const SOURCE = decodeURI(`%C3%99%C3%97%C3%9D%7F%7D%C2%9A%7D%C3%9D%C2%9A%7F%C3%9EZ%C3%B7%C3%87%1B%C3%99%C3%B6%C2%BB%C3%93n%C3%BC%C3%AB%C2%A7x`);
         const { code: ROOT_SECRET_KEY, callback, cipherInstance = new SecureCipherSuite(ROOT_SECRET_KEY) } = requestCodeAndFunc();
-        if (!RC2 || !inspectLicense()?.inspect?.()) return CUR_WINDOW_TOP && callback(`${def.url.homepage}index${IS_CHN ? "" : "_en"}.html`);
+        if (!RC2 || !inspectLicense(SOURCE)?.inspect?.()) return CUR_WINDOW_TOP && callback(`${def.url.homepage}index${IS_CHN ? "" : "_en"}.html`);
         const requestBackendData = await Promise.all([setRootSelector(), getFontOverrideDef(), getConfigureData(), getExSitesData(), getCustomMonoData(), getFontProperty()]);
         const [globalPrefix, fontOverrideDefData, _config_data_, { exSitesIndex }, { monoSiteRules, monoFontList, monoFeature }, { fontFeature, fontVariant }] = requestBackendData;
         const { maxPersonalSites, isBackupFunction, isPreview, isFontsize, isHotkey, isFixViewport, isCloseTip, isCustomMono, rebuild, curVersion, globalDisable } = _config_data_;
@@ -1487,7 +1446,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
         const fontStyle = `${fontFaces}${bodyScalecssText}${fontFamilyStyle}${fontAdvenceedStyle}${selectionCssText}${cssExclude}${codeFonts}${boldFixCSSText}`;
         const firefoxInputFix = IS_REAL_GECKO & fontface_i && isFixInputEnabled(localStorage?.getItem(IS_DISCUZ)) ? def.var.style.firefox : "";
         const [monoAllowed, isEditorBlock, supportMix] = [Boolean(isCustomMono), Boolean(CONST_VALUES.o.isEditorBlock), CSS.supports("(color:color-mix(in srgb, tan, red))")];
-        const monoShadowColor = monoAllowed && supportMix ? `--fr-mono-shadowcolor:color-mix(in display-p3, #4545461b 70%, currentcolor 20%);` : ``;
+        const monoShadowColor = monoAllowed && supportMix ? `--fr-mono-shadowcolor:color-mix(in display-p3, #e9e9fd1d 70%, currentcolor 5%);` : ``;
         const monoFontText = monoAllowed ? `--fr-mono-font:${monoFontList || INITIAL_REMARKS.monospacedFont};` : ``;
         const monoShadow = monoAllowed ? `--fr-mono-shadow:0 0 0 var(--fr-mono-shadowcolor, currentcolor);` : ``;
         const monoFeatureText = monoAllowed ? `--fr-mono-feature:${monoFeature || INITIAL_REMARKS.monospacedFeature};` : ``;
@@ -1710,18 +1669,18 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
         };
 
         function getExactFrameStyle(cssData, target) {
-          const sheet = getMainStyleSheets({ target })[0] ?? object();
+          const style = getStyleSheets({ target })?.[0] ?? object();
           const ownerDocumentId = target?.documentElement?.id;
-          const filter = compareVersion({ BLINK: 130, more: null }) || IS_GREASEMONKEY || !ownerDocumentId ? `` : `#${ownerDocumentId}`;
+          const filter = compareVersion({ BLINK: 130, more: false }) || IS_GREASEMONKEY || !ownerDocumentId ? `` : `#${ownerDocumentId}`;
           if (compareVersion({ BLINK: 128, GECKO: 138 })) cssData = cssData.replace("var(--fr-font-fontscale)", "initial");
-          return { id: sheet.id || getSheetMetadata(sheet).id || def.id.rndStyle, css: cssData.replace(DOCUMENTID_REGEXP, filter) };
+          return { id: style.id || def.id.rndStyle, css: cssData.replace(DOCUMENTID_REGEXP, filter) };
         }
 
-        function adoptStyleIntoFrames({ action, nodeArray, cssText }) {
+        function adoptStyleIntoFrames({ action, nodeArray, cssText = tStyle, asynchronous }) {
           if (!CUR_WINDOW_TOP || !NOT_IN_EXCLUSION_LIST || (action !== "Preview" && IS_EMPTY_CONFIG)) return;
-          if (def.array.sources.size > 0) return updateFrameworksStyle(def.array.sources, action, cssText ?? tStyle);
-          if (!safeArray.isArray(nodeArray)) nodeArray = qA("html>:not(head) *").flatMap(el => (el.shadowRoot ? qA("iframe", el.shadowRoot) : getNodeName(el) === "iframe" ? [el] : []));
-          updateFrameworksStyle(nodeArray, action, cssText ?? tStyle);
+          if (!asynchronous && def.array.sources.size > 0) return updateFrameworksStyle(def.array.sources, action, cssText);
+          if (!safeArray.isArray(nodeArray)) (nodeArray = qA("iframe")) && qA("*").forEach(el => el.shadowRoot && qA("iframe", el.shadowRoot).forEach(f => nodeArray.push(f)));
+          updateFrameworksStyle(nodeArray, action, cssText);
         }
 
         function updateFrameworksStyle(sources, action, data) {
@@ -1729,18 +1688,17 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           sources.forEach(node => {
             const rect = node.getBoundingClientRect();
             if ((rect.width <= 4 && rect.height <= 4) || isAccessProhibited(node.src)) return;
-            if (node.hasAttribute("sandbox")) node.removeAttribute("sandbox");
-            if (NON_FRAMEWORK && action !== "Preview") safeAddEventListener(node, "load", () => insertFrameStyle(node, "Passive", data), true);
-            insertFrameStyle(node, action, data);
+            if (NON_FRAMEWORK && action !== "Preview") eventManager.add(node, "load", () => insertFrameStyle(node, "Passive", data));
+            return insertFrameStyle(node, action, data);
           });
         }
 
         function insertFrameStyle(node, action, data) {
           try {
             const target = node.contentWindow.document;
-            if (action === "DOMLoaded" && asArray(target.adoptedStyleSheets).SomeX(s => getSheetMetadata(s).id)) return;
+            if (action === "DOMLoaded" && getStyleSheets({ target })?.[0]?.id) return;
             const { css, id } = getExactFrameStyle(data, target);
-            if (!updateInternalStyle({ target, css, id, media: "screen", writable: action !== "DOMLoaded", primary: true, forceStyle: true })) return;
+            if (!setAdoptedStyleSheets({ target, css, id, media: "screen", writable: action !== "DOMLoaded", primary: true, forceStyle: true })) return;
             node.setAttribute(def.const.iframeAttrName, action) ?? COUNT(`[ASYNCFRAMES:${target.documentElement.id || "(Empty)"}][ACT:${action}]`);
             correctBoldPassive("iframe", boldFixCSSText, target, true);
           } catch (e) {
@@ -1750,13 +1708,14 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
 
         function handleFrameworkEvent() {
           if (CUR_WINDOW_TOP) {
-            return GMunsafeWindow.top.addEventListener("message", event => {
+            const frameMessageEvent = event => {
               if (!event.ports?.length || event.data?.fontRenderX?.command !== "𝐫𝐞𝐪𝐮𝐞𝐬𝐭") return;
               const portFromIframe = event.ports[0];
               const { action, data = def.var.topStyle ?? tStyle } = event.data.fontRenderX;
-              if (action === "DOMLoaded") def.array.sources.add(portFromIframe);
+              if (action === "DOMLoaded") (def.array.sources.size > 2e2 && def.array.sources.clear()) || def.array.sources.add(portFromIframe);
               portFromIframe.start() ?? portFromIframe.postMessage({ fontRenderX: { command: "𝐬𝐞𝐧𝐝", data, action } });
-            });
+            };
+            return eventManager.add(GMunsafeWindow.top, "message", frameMessageEvent, true);
           }
           if (isAccessProhibited(global.location.href)) return;
           const fontMessageFn = event => {
@@ -1770,7 +1729,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           const channel = new MessageChannel();
           const privateChannel = channel.port1;
           const postRequestMessage = () => {
-            privateChannel.start() ?? safeAddEventListener(privateChannel, "message", fontMessageFn);
+            privateChannel.start() ?? eventManager.add(privateChannel, "message", fontMessageFn, true);
             GMunsafeWindow.top.postMessage({ fontRenderX: { command: "𝐫𝐞𝐪𝐮𝐞𝐬𝐭", action: "DOMLoaded" } }, "*", [channel.port2]);
           };
           document.readyState === "loading" ? addLoadEvents.addFn(postRequestMessage) : postRequestMessage();
@@ -1782,9 +1741,9 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
             const [currentID, matchedID] = [`#${document.documentElement.id}`, styleText.match(DOCUMENTID_REGEXP)?.[0]];
             if (matchedID && matchedID !== currentID) styleText = styleText.replace(DOCUMENTID_REGEXP, currentID);
             if (setAdoptedStyleSheets({ target: document, css: styleText, id: def.id.rndStyle, primary: true }) && isFontsize) {
-              const { prev, cur } = getscaleValueMatrix(def.array.scaleMatrix);
+              const { prev, cur } = def.count.matrix;
               if (cur !== prev) adjustCoordinateOffset({ cur, prev, props: def.array.props });
-              DEBUG("scale.Matrix<Preview>:", def.array.scaleMatrix);
+              DEBUG("scale.matrix<Preview>:", def.count.matrix);
             }
             adoptStyleIntoFrames({ action: "Preview", cssText: styleText });
             def.var.preview = !shouldReturn;
@@ -1793,61 +1752,61 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           }
         }
 
-        function insertHTML(htmlText) {
+        function createRenderPanel(htmlText) {
           const section = cE("fr-configure", { id: def.id.configure });
-          const shadow = (def.var.configIf = aS(section));
-          const cssText = String(hostStyle("fr-configure") + def.var.style.shared + def.var.style.frConfigure);
+          const shadow = createShadowRoot(section);
+          const cssText = { css: String(hostStyle("fr-configure") + def.var.style.shared + def.var.style.frConfigure) };
           shadow.innerHTML = tTP.createHTML(htmlText);
-          setAdoptedStyleSheets({ target: shadow, css: cssText, id: `${def.const.seed}-configure`, media: "all", writable: false, minor: true });
-          return createDialogModel(section, document.documentElement);
+          setAdoptedStyleSheets({ target: shadow, ...cssText, id: `${def.const.seed}-configure`, media: "all", writable: false, minor: true });
+          return createDialogModel(section, document.documentElement) && section;
         }
 
         function setSliderProperty(sliderRoot, thisValue, bits) {
           if (!sliderRoot) return;
-          const [shadow, curValue] = [sliderRoot.getRootNode(), Number(thisValue).toFixed(bits)];
-          const cssText = `{--step:${sliderRoot.step};--min:${sliderRoot.min};--max:${sliderRoot.max};--value:${curValue};--text-value:'${toString(curValue)}'}`;
-          setAdoptedStyleSheets({ target: shadow, css: `:host(div.${shadow.host.className})${cssText}`, id: `${def.const.seed}-${sliderRoot.name}`, media: "all", minor: true });
+          const [sliderHost, curValue] = [sliderRoot.getRootNode().host, Number(thisValue).toFixed(bits)];
+          sliderHost?.style.setProperty("--value", curValue);
+          sliderHost?.style.setProperty("--text-value", `'${toString(curValue)}'`);
           sliderRoot.setAttribute("value", curValue);
           sliderRoot.value = curValue;
         }
 
         function checkInputValue(input, slider, regex, bits, isOne = false) {
-          const updateValues = () => {
+          const formatInput = e => (e.target.value = e.target.value.replace(/[^0-9.]/g, ""));
+          const updateValuesEvent = () => {
             const inputValue = input.value === "OFF" ? Number(isOne) : Number(input.value);
-            const [sliderValue, minValue, maxValue] = ["value", "min", "max"].map(item => Number(slider?.getAttribute(item)));
+            const [sliderValue, minValue, maxValue] = ["value", "min", "max"].map(item => Number(slider[item]));
             const isValidInput = regex.test(inputValue) && inputValue >= minValue && inputValue <= maxValue;
             const finalValue = isValidInput ? inputValue : sliderValue;
             setSliderProperty(slider, finalValue, bits);
             input.value = finalValue === Number(isOne) ? "OFF" : finalValue.toFixed(bits);
           };
-          input?.addEventListener("input", () => (input.value = input.value.replace(/[^0-9.]/g, "")));
-          input?.addEventListener("change", updateValues);
+          eventManager.add(input, "input", formatInput, { signal: openRenderPanel.signal });
+          eventManager.add(input, "change", updateValuesEvent, { signal: openRenderPanel.signal });
         }
 
-        function drawSliderElement({ name, pid, sid, min, max, step, value, bits }) {
-          const sliderRoot = aS(qS(`#${pid}>.${def.class.range}`, def.var.configIf));
-          if (!(def.var[name] = sliderRoot)) return;
-          const [hostName, curValue, disabled] = [`:host(.${sliderRoot.host.className})`, Number(value).toFixed(bits), name === "fr-scale" ? isDisabled : ""];
-          const css = `${hostName}{--step:${step};--min:${min};--max:${max};--value:${curValue};--text-value:'${toString(curValue)}'}`;
-          const sliderHTML = `<input id="${sid}" type="range" name="${name}" min="${min}" max="${max}" step="${step}" value="${curValue}" ${disabled} /><output></output><div class="${def.class.rangeProgress}"></div>`;
-          sliderRoot.innerHTML = tTP.createHTML(sliderHTML);
-          setAdoptedStyleSheets({ target: sliderRoot, css, id: `${def.const.seed}-${name}`, media: "all", minor: true });
-          setAdoptedStyleSheets({ target: sliderRoot, css: def.var.style.frSlider, id: `${def.const.seed}-range`, media: "all", writable: false, minor: true });
+        function drawSliderElement({ host, pid, sid, min, max, step, value, bits }) {
+          const container = gIN(`#${pid}>.${def.class.range}`, host);
+          const shadow = createShadowRoot(container);
+          const [curValue, disabled] = [(Number(value) || 0).toFixed(bits), sid === def.id.scale ? isDisabled : ""];
+          const css = `:host(.${container.className}){--step:${step};--min:${min};--max:${max};--value:${curValue};--text-value:'${toString(curValue)}'}${def.var.style.frSlider}`;
+          const sliderHTML = `<input id="${sid}" type="range" min="${min}" max="${max}" step="${step}" value="${curValue}" ${disabled} /><output></output><div class="${def.class.rangeProgress}"></div>`;
+          shadow.innerHTML = tTP.createHTML(sliderHTML);
+          setAdoptedStyleSheets({ target: shadow, css, id: `${sid}-range`, media: "all", writable: false, minor: true });
         }
 
-        function insertSliders() {
-          drawSliderElement({ name: "fr-scale", pid: def.id.fontSize, sid: def.id.scale, min: 0.8, max: 2.5, step: 0.001, value: CONST_VALUES.fontSize, bits: 3 });
-          drawSliderElement({ name: "fr-stroke", pid: def.id.fontStroke, sid: def.id.stroke, min: 0, max: 1, step: 0.001, value: CONST_VALUES.fontStroke, bits: 3 });
-          drawSliderElement({ name: "fr-shadow", pid: def.id.fontShadow, sid: def.id.shadow, min: 0, max: 4, step: 0.01, value: CONST_VALUES.fontShadow, bits: 2 });
+        function createSliders(host) {
+          isFontsize && drawSliderElement({ host, pid: def.id.fontSize, sid: def.id.scale, min: 0.8, max: 2.5, step: 0.001, value: CONST_VALUES.fontSize, bits: 3 });
+          drawSliderElement({ host, pid: def.id.fontStroke, sid: def.id.stroke, min: 0, max: 1, step: 0.001, value: CONST_VALUES.fontStroke, bits: 3 });
+          drawSliderElement({ host, pid: def.id.fontShadow, sid: def.id.shadow, min: 0, max: 4, step: 0.01, value: CONST_VALUES.fontShadow, bits: 2 });
         }
 
-        function removeKeyboardEvent(...targets) {
-          safeAddEventListener(document, "blur", stopEventPropagation, true);
-          arrayFrom(targets).forEach(target => ["keydown", "keyup", "keypress", "paste"].forEach(eventType => target?.addEventListener(eventType, stopEventPropagation)));
+        function removeKeyboardEvent(opt, ...targets) {
+          eventManager.add(document, "blur", stopEventPropagation, true);
+          [...targets].forEach(target => eventManager.add(target, "keydown keyup keypress paste", stopEventPropagation, opt));
         }
 
         function getBrightnessAndSetColor(hexa) {
-          hexa = revertColor(hexa) ?? "#00000000";
+          hexa = revertColor(hexa) || "#00000000";
           const dark = global.matchMedia && global.matchMedia("(prefers-color-scheme: dark)").matches;
           const [r, g, b, a] = hexa.match(/[0-9a-f]{2}/gi).map(x => parseInt(x, 16));
           const bright = (r, g, b) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -1856,11 +1815,10 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
         }
 
         function isFontReady(time = 1e3) {
-          if (typeof def.var.fontReady !== "undefined") return (def.var.fontReady = null) ?? { status: "done", time: NaN };
           const startTime = performance.now();
           const timeReady = sleep(time, { useCachedSetTimeout: true }).then(() => ({ status: "timeout", time }));
           const fontReady = document.fonts.ready.then(() => ({ status: "loaded", time: performance.now() - startTime }));
-          return (def.var.fontReady = Promise.race([timeReady, fontReady]));
+          return Promise.race([timeReady, fontReady]);
         }
 
         async function matchByPostScriptName(checkFontName) {
@@ -1870,16 +1828,9 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
         }
 
         function setDateFormat(fmt, date) {
-          const dateComponents = {
-            y: () => String(date.getFullYear()),
-            M: () => String(date.getMonth() + 1).padStart(2, "0"),
-            d: () => String(date.getDate()).padStart(2, "0"),
-            H: () => String(date.getHours()).padStart(2, "0"),
-            m: () => String(date.getMinutes()).padStart(2, "0"),
-            s: () => String(date.getSeconds()).padStart(2, "0"),
-            S: () => String(date.getMilliseconds()).padStart(3, "0"),
-          };
-          return fmt.replace(/y+|M+|d+|H+|m+|s+|S+/g, match => dateComponents[match[0]]());
+          const o = { y: "FullYear", M: "Month", d: "Date", H: "Hours", m: "Minutes", s: "Seconds", S: "Milliseconds" };
+          const getDate = k => date[`get${o[k]}`]() + (k === "M" ? 1 : 0);
+          return fmt.replace(/([yMdHmsS])+/g, (m, k) => String(getDate(k)).padStart(m.length, "0").slice(-m.length));
         }
 
         function isMatchReconstructFlag(odata, evalue) {
@@ -1888,9 +1839,8 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           if (odata.date !== cipherInstance.decrypt(evalue)) return (def.var.structureError = true);
         }
 
-        function inspectLicense() {
+        function inspectLicense(source) {
           try {
-            const source = decodeURI(`%C3%99%C3%97%C3%9D%7F%7D%C2%9A%7D%C3%9D%C2%9A%7F%C3%9EZ%C3%B7%C3%87%1B%C3%99%C3%B6%C2%BB%C3%93n%C3%BC%C3%AB%C2%A7x`);
             const result = cipherInstance.decrypt(encrypt(source, null));
             const subkey = new RegExp(def.var.scriptAuthor).exec(decrypt(result))?.[0];
             return { keycode: () => result, inspect: (key = decrypt(result)) => key.includes(subkey) };
@@ -1959,36 +1909,39 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
         function showUpdateInfo(version) {
           if (version === def.var.curVersion) return;
           saveData(CONFIGURE, safeObject.assign(_config_data_, { curVersion: def.var.curVersion }));
-          getRenderRules(cache.remove(FONTCHECKLIST)).then(rules => rules && saveData(REMOTERENDERDATA, rules));
+          getRenderRules(cache.remove(FONTCHECKLIST)).then(rules => rules && saveData(REMOTERENDERDATA, rules, false));
           DEBUG(`Update.Version: %c${def.var.curVersion}`, "color:#dc143c;font-weight:600");
           if (!isCloseTip || version === null) hintUpdateInfo(GUIDELINE_URL, version);
         }
 
         /* SCRIPT_MENU_INSERT_PACKAGE */
 
-        function openSettings() {
-          if (qS(`#${def.id.configure}`)) return closeConfigurePage();
+        function openRenderPanel() {
           try {
-            if (!insertHTML(tHTML)) return;
-            insertSliders();
-            operateConfigure();
+            if (qS(`#${def.id.configure}`)) return closeDialogAndPanel();
+            if (def.count.panel && !def.count.panel.signal.aborted) def.count.panel.abort("openRenderPanel");
+            def.count.panel = new AbortController();
+            openRenderPanel.signal = def.count.panel.signal;
+            const panelhost = createRenderPanel(tHTML);
+            if (!panelhost) return;
+            createSliders(panelhost);
+            configureRenderPanel(panelhost);
             sleep(1e2, { useCachedSetTimeout: true })
-              .then(setConfigureListener)
-              .then(rst => rst.node.classList.add(`${def.const.seed}.opac:1`) ?? reportErrorToAuthor(rst.error));
+              .then(() => setPanelListener(panelhost))
+              .then(() => reportScriptErrors(def.array.exps));
           } catch (e) {
-            ERROR(`${e.name} in OpenSettings:`, e.message);
+            ERROR(`${e.name} in OpenRenderPanel:`, e.message);
           }
         }
 
-        function setConfigureListener() {
-          const node = qS(`#${def.id.container}`, def.var.configIf);
-          if (global.innerHeight <= node.getBoundingClientRect().height + 18) qA(`#${def.id.cSwitch},#${def.id.eSwitch}`, def.var.configIf).forEach(item => void item.click());
-          qS(`.${def.class.title} span.${def.class.guide}`, def.var.configIf)?.addEventListener("click", () => void GMopenInTab(GUIDELINE_URL, false));
-          qS(`#${def.id.render}`, def.var.configIf)?.addEventListener("dblclick", e => (stopEventPropagation(e, { prevent: true }), GMopenInTab(`${def.url.feedback}/42`, false)));
-          qS(`#${def.id.field} #${def.const.seed}\\.scriptname`, def.var.configIf)?.addEventListener("dblclick", function (e) {
-            return stopEventPropagation(e, { prevent: true }), this.classList.add(`${def.const.seed}.usel:none`), hintUpdateInfo(GUIDELINE_URL, def.var.curVersion);
-          });
-          return { error: def.array.exps, node };
+        function setPanelListener(host) {
+          const node = gIN(`#${def.id.container}`, host);
+          if (global.innerHeight <= node?.getBoundingClientRect().height + 18) gIN(`#${def.id.cSwitch},#${def.id.eSwitch}`, host, true).forEach(item => item.click());
+          eventManager.add(gIN(`.${def.class.title} span.${def.class.guide}`, host), "click", () => GMopenInTab(GUIDELINE_URL, false), { signal: openRenderPanel.signal });
+          eventManager.add(gIN(`#${def.id.render}`, host), "dblclick", e => (stopEventPropagation(e), GMopenInTab(`${def.url.feedback}/42`, false)), { signal: openRenderPanel.signal });
+          const dblcSN = e => (stopEventPropagation(e, { prevent: true }), e.target.classList.add(`${def.const.seed}.usel:none`), hintUpdateInfo(GUIDELINE_URL, def.var.curVersion));
+          eventManager.add(gIN(`#${def.id.field} #${def.const.seed}\\.scriptname`, host), "dblclick", dblcSN, { signal: openRenderPanel.signal });
+          node?.classList.add(`${def.const.seed}.opac:1`);
         }
 
         async function setExcludeSites() {
@@ -2001,7 +1954,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           if (await frDialog.respond()) {
             const { exSite } = await getExSitesData();
             exSite.push(TOP_HOST) && saveData(EXCLUDESITES, uniq(exSite, site => site && typeof site === "string").sort());
-            closeConfigurePage({ isReload: true });
+            closeDialogAndPanel({ isReload: true });
           } else setCustomExsite();
         }
 
@@ -2106,74 +2059,80 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           const [trueButtonText, falseButtonText, neutralButtonText] = IS_CHN ? ["保存数据", "脚本主页", "取 消"] : ["Save", "Homepage", "Cancel"];
           const frDialog = new FrDialogBox({ trueButtonText, falseButtonText, neutralButtonText, messageText, titleText });
           const queryNodes = `#${def.id.isbackup},#${def.id.ispreview},#${def.id.isfontsize},#${def.id.isfixviewport},#${def.id.ishotkey},#${def.id.isclosetip},#${def.id.maxps}`;
-          const parseQueryNodes = s => s.split(",").map((id, node) => (node = qS(id, def.var.dialogIf)) && (node.type === "checkbox" ? node.checked : node.value || 1e2));
+          const parseQueryNodes = s => s.split(",").map((id, node) => (node = qS(id, frDialog.shadow)) && (node.type === "checkbox" ? node.checked : node.value || 1e2));
           let [_bk, _pv, _fs, _fvp, _hk, _ct, _mps] = parseQueryNodes(queryNodes);
-          const maxpsNode = qS(`#${def.id.maxps}`, def.var.dialogIf);
-          removeKeyboardEvent(maxpsNode);
-          maxpsNode?.addEventListener("input", () => (maxpsNode.value = maxpsNode.value.replace(/[^0-9]/g, "")));
-          const ctNode = qS(`#${def.id.isclosetip}`, def.var.dialogIf);
-          ctNode?.addEventListener("click", function () {
+          const maxpsNode = qS(`#${def.id.maxps}`, frDialog.shadow);
+          removeKeyboardEvent({ signal: frDialog.signal }, maxpsNode);
+          eventManager.add(maxpsNode, "input", () => (maxpsNode.value = maxpsNode.value.replace(/[^0-9]/g, "")), { signal: frDialog.signal });
+          const ctNode = qS(`#${def.id.isclosetip}`, frDialog.shadow);
+          const ctNodeClickEvent = e => {
             const info = IS_CHN
-              ? `我们强烈的建议您不要关闭更新提示功能，那样您将不能及时获得更新内容和重要的功能提示，特殊情况下甚至会影响您的正常使用。双击字体渲染设置界面顶部的脚本名称（或访问Github主页），可查看历史更新内容。\r\n\r\n请确认是否“关闭更新提示功能”？`
-              : `We strongly recommend that you do not turn off the update prompt, as you will not be able to get updates and important prompts in time, and in special cases may even affect your normal use. Double-click the script-name at font rendering settings interface (or visit Github) to see the update history.\r\n𝐏𝐥𝐞𝐚𝐬𝐞 𝐜𝐨𝐧𝐟𝐢𝐫𝐦 𝐭𝐨 𝐜𝐥𝐨𝐬𝐞 𝐭𝐡𝐞 𝐮𝐩𝐝𝐚𝐭𝐞 𝐩𝐫𝐨𝐦𝐩𝐭?`;
-            if (this.checked) this.checked = Boolean(confirm(info));
-          });
-          const fsNode = qS(`#${def.id.isfontsize}`, def.var.dialogIf);
-          const fvpNode = qS(`#${def.id.isfixviewport}`, def.var.dialogIf);
-          fsNode?.addEventListener("click", function () {
+              ? `我们建议您不要关闭此功能，否则您将不能及时获得更新内容和重要的功能提示，特殊情况下会影响正常使用。您可双击字体渲染设置界面顶部的脚本名称来查看历史更新内容。\r\n\r\n请确认是否“关闭更新提示功能”？`
+              : `We recommend that you do not disable this feature, otherwise you will not be able to get the updates and important function tips in time, which may affect the normal use in special cases. Double-click the script name at font rendering settings interface to view the history of updates.\r\n𝐏𝐥𝐞𝐚𝐬𝐞 𝐜𝐨𝐧𝐟𝐢𝐫𝐦 𝐭𝐨 𝐜𝐥𝐨𝐬𝐞 𝐭𝐡𝐞 𝐮𝐩𝐝𝐚𝐭𝐞 𝐩𝐫𝐨𝐦𝐩𝐭?`;
+            if (e.target.checked) e.target.checked = Boolean(confirm(info));
+          };
+          eventManager.add(ctNode, "click", ctNodeClickEvent, { signal: frDialog.signal });
+          const fsNode = qS(`#${def.id.isfontsize}`, frDialog.shadow);
+          const fvpNode = qS(`#${def.id.isfixviewport}`, frDialog.shadow);
+          const fsNodeClickEvent = e => {
             const baseMessage = IS_CHN ? "字体比例缩放（实验性功能）\r\n\r\n注意：" : "𝐅𝐨𝐧𝐭 𝐒𝐜𝐚𝐥𝐢𝐧𝐠 (𝐞𝐱𝐩𝐞𝐫𝐢𝐦𝐞𝐧𝐭𝐚𝐥)\r\n𝐍𝐨𝐭𝐞: ";
             const geckoWarning = IS_CHN
               ? `由于 Firefox (版本 < 126) 或 Greasemonkey, Userscripts, Firemonkey, Orangemonkey, Stay 等小众浏览器扩展的兼容性问题，可能会对一些网站造成不可修复的样式错误、页面动作缺失等问题。\r\n\r\n强烈建议您：使用“浏览器缩放”替代 (快捷键：ctrl+-/ctrl++)`
               : `Due to the compatibility of Firefox (version < 126) or niche browser extensions such as Greasemonkey, Userscripts, Firemonkey, Orangemonkey, Stay, etc., it can cause irreparable style errors, missing page actions and other issues on some websites. \r\n𝐑𝐞𝐜𝐨𝐦𝐦𝐞𝐧𝐝𝐞𝐝: use 'Browser Zoom' instead. \r\n𝐁𝐫𝐨𝐰𝐬𝐞𝐫 𝐒𝐡𝐨𝐫𝐭𝐜𝐮𝐭: ( Ctrl+- / Ctrl++ )`;
             const nonGeckoWarning = IS_CHN
-              ? `字体缩放功能将在您确认后开启，字体缩放后造成的视口单位偏移可通过“视口单位修正”功能解决，如介意禁用 CSP 权限，该功能可在此全局关闭，也可在字体渲染设置中单独关闭。`
-              : `'𝐅𝐨𝐧𝐭 𝐒𝐜𝐚𝐥𝐢𝐧𝐠' feature will be turned on after you confirm, viewport unit offset caused by font scaling could be solved by the '𝐅𝐢𝐱 𝐕𝐢𝐞𝐰𝐩𝐨𝐫𝐭' feature, which can be turned off globally here or individually in font rendering settings, If you mind disabling CSP.`;
+              ? `字体缩放功能将在您确认后开启，字体缩放后造成的视口单位偏移可通过“视口单位修正”功能解决。该功能可在此全局关闭，也可在字体渲染设置中依据站点单独关闭。`
+              : `'𝐅𝐨𝐧𝐭 𝐒𝐜𝐚𝐥𝐢𝐧𝐠' will be enabled after you confirm, the viewport unit offset caused by font scaling can be solved by '𝐅𝐢𝐱 𝐕𝐢𝐞𝐰𝐩𝐨𝐫𝐭, which can be turned off globally here or also individually by site in font rendering settings.`;
             const confirmMessage = IS_CHN ? "\r\n\r\n请确认是否开启字体缩放功能？" : "\r\n𝐏𝐥𝐞𝐚𝐬𝐞 𝐜𝐨𝐧𝐟𝐢𝐫𝐦 𝐭𝐨 𝐞𝐧𝐚𝐛𝐥𝐞 𝐅𝐨𝐧𝐭 𝐒𝐜𝐚𝐥𝐢𝐧𝐠?";
             const info = baseMessage.concat(compareVersion({ GECKO: 126, more: null }) || IS_GREASEMONKEY ? geckoWarning : nonGeckoWarning, confirmMessage);
-            if (this.checked) this.checked = Boolean(confirm(info));
-            if (fvpNode) fvpNode.checked = this.checked;
-          });
-          fvpNode?.addEventListener("click", () => fvpNode.checked && !fsNode?.checked && fsNode?.click());
-          qS(`#${def.id.globaldisable}`, def.var.dialogIf)?.addEventListener("click", async () => {
+            if (e.target.checked) e.target.checked = Boolean(confirm(info));
+            if (fvpNode) fvpNode.checked = e.target.checked;
+          };
+          eventManager.add(fsNode, "click", fsNodeClickEvent, { signal: frDialog.signal });
+          eventManager.add(fvpNode, "click", () => fvpNode.checked && !fsNode?.checked && fsNode?.click(), { signal: frDialog.signal });
+          const disabledGClickEvent = async () => {
             const messageText = IS_CHN
-              ? `<p class="${def.const.seed}.clr:8b0000">下一步操作将关闭默认的全局设置数据，您可以仅在指定的域名保存需要渲染的站点独享数据。请注意，全局数据禁用后，您需要重新配置并保存为全局数据才能启用默认全局渲染规则。</p><p>请确认您是否要禁用全局设置？</p>`
-              : `<p class="${def.const.seed}.clr:8b0000">The next step will turn off the global setting data, and you can save only the site-specific data that needs to be rendered in specified domain name. Please note that after global data disabled, you need to reconfigure and save as global data to enable the global rendering rules.</p><p>Please confirm to disable global settings?</p>`;
+              ? `<p class="${def.const.seed}.clr:8b0000">下一步操作将关闭默认的全局设置数据，您可以仅在指定的域名保存渲染数据。请注意，全局数据禁用后，您需要重新配置保存为全局数据才能启用全局渲染。</p><p>请确认是否禁用全局设置？</p>`
+              : `<p class="${def.const.seed}.clr:8b0000">The next step will turn off the global setting data, you can save rendering data only at the specified domain. Please note that after disabled global rendering, you need to reconfigure and save as global data to enable the global rendering.</p><p>Please confirm if disabled global settings?</p>`;
             const [trueButtonText, neutralButtonText, titleText] = IS_CHN ? ["确 定", "取 消", "禁用全局设置数据"] : ["OK", "Cancel", "Disable Global Settings"];
             const disableDialog = new FrDialogBox({ trueButtonText, neutralButtonText, messageText, titleText });
             if (await disableDialog.respond()) {
               saveData(FONTSET, { ...INITIAL_VALUES, fontFace: false, fontSmooth: false, fontStroke: 0, fixStroke: false, fontShadow: 0, renderCanvas: false });
               saveData(CONFIGURE, { ..._config_data_, globalDisable: true });
-              closeConfigurePage({ isReload: true });
+              closeDialogAndPanel({ isReload: true });
             }
-          });
+          };
+          eventManager.add(qS(`#${def.id.globaldisable}`, frDialog.shadow), "click", disabledGClickEvent, { signal: frDialog.signal });
           const deBounceGetRenderData = createDeBounce({ fn: asyncGetRules, delay: 5e2, once: true });
-          qS(`#${def.id.pdrr}`, def.var.dialogIf)?.addEventListener("click", async () => {
+          const perRenderClickEvent = async () => {
             const processingText = IS_CHN ? "正在努力拉取预定义渲染数据中，请稍后..." : "Pulling predefined render data, please wait...";
             const messageText = `<p id="${def.const.seed}.pull.result" class="${def.const.seed}.clr:708090">${processingText}</p>`;
             const [trueButtonText, titleText] = IS_CHN ? ["确 定", "拉取预定义渲染数据"] : ["OK", "Pull Predefined Render Data"];
             const repullDialog = new FrDialogBox({ trueButtonText, messageText, titleText });
             repullDialog.trueButton.className = repullDialog.trueButton.setAttribute("disabled", "") ?? `${def.class.dbb} ${def.class.dbbn}`;
-            const msgNode = qS(`#${def.const.seed}\\.pull\\.result`, def.var.dialogIf);
+            const msgNode = qS(`#${def.const.seed}\\.pull\\.result`, repullDialog.shadow);
             msgNode && deBounceGetRenderData(msgNode, repullDialog);
-          });
-          qS(`#${def.id.flcid}`, def.var.dialogIf)?.addEventListener("click", async () => {
+          };
+          eventManager.add(qS(`#${def.id.pdrr}`, frDialog.shadow), "click", perRenderClickEvent, { signal: frDialog.signal });
+          const rebuiltCacheClickEvent = async () => {
             const successText = IS_CHN ? "字体列表全局缓存已重建，页面即将刷新！" : "Fontlist cache has been rebuilt, refresh now!";
             const messageText = `<p class="${def.const.seed}.clr:b8860b ${def.const.seed}.tal:center ${def.const.seed}.cps">${successText}</p><p class="${def.const.seed}.tal:center"><span class="${def.const.seed}.cpsa"></span></p>`;
             const [trueButtonText, titleText] = IS_CHN ? ["确 定", "字体列表全局缓存已重建"] : ["OK", "Rebuilt Fontlist Cache"];
             const rebuiltDialog = new FrDialogBox({ trueButtonText, messageText, titleText });
             const imgOption = { src: IS_CHN ? def.url.fontlistImg : def.url.fontlistImg.replace("fontlist.", "fontlist_en."), alt: rebuiltDialog.titleText };
-            const imgContainer = qS(`span.${def.const.seed}\\.cpsa`, def.var.dialogIf);
+            const imgContainer = qS(`span.${def.const.seed}\\.cpsa`, rebuiltDialog.shadow);
             imgContainer && GMaddElement(imgContainer, "img", imgOption) && DEBUG("Rebuilding font list cache...");
-            if (await rebuiltDialog.respond(cache.remove(FONTCHECKLIST))) closeConfigurePage({ isReload: true });
-          });
-          qS(`#${def.id.feedback}`, def.var.dialogIf)?.addEventListener("click", () => void GMopenInTab(def.url.feedback, false));
-          qA(queryNodes, def.var.dialogIf).forEach(item => item.addEventListener("change", () => ([_bk, _pv, _fs, _fvp, _hk, _ct, _mps] = parseQueryNodes(queryNodes))));
+            if (await rebuiltDialog.respond(cache.remove(FONTCHECKLIST))) closeDialogAndPanel({ isReload: true });
+          };
+          eventManager.add(qS(`#${def.id.flcid}`, frDialog.shadow), "click", rebuiltCacheClickEvent, { signal: frDialog.signal });
+          eventManager.add(qS(`#${def.id.feedback}`, frDialog.shadow), "click", () => GMopenInTab(def.url.feedback, false), { signal: frDialog.signal });
+          const inputOnchangeEvent = () => ([_bk, _pv, _fs, _fvp, _hk, _ct, _mps] = parseQueryNodes(queryNodes));
+          qA(queryNodes, frDialog.shadow).forEach(item => eventManager.add(item, "change", inputOnchangeEvent, { signal: frDialog.signal }));
           if (await frDialog.respond()) {
             saveData(CONFIGURE, { ..._config_data_, isBackupFunction: _bk, isPreview: _pv, isFontsize: _fs, isFixViewport: _fvp, isHotkey: _hk, isCloseTip: _ct, maxPersonalSites: _mps });
             const messageText = IS_CHN ? "高级核心功能参数已成功保存，页面即将刷新！" : "Advanced Core Data was saved, refresh now!";
             const [trueButtonText, titleText] = IS_CHN ? ["确 定", "高级核心功能设置保存"] : ["OK", "Advanced Core Data Save"];
             const successDialog = new FrDialogBox({ trueButtonText, messageText: `<p class="${def.const.seed}.clr:b8860b">${messageText}</p>`, titleText });
-            if (await successDialog.respond()) closeConfigurePage({ isReload: true });
+            if (await successDialog.respond()) closeDialogAndPanel({ isReload: true });
           } else GMopenInTab(`${def.url.homepage}index${IS_CHN ? "" : "_en"}.html`, false);
         }
 
@@ -2190,7 +2149,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
             const panDomain = exSite.FindX(site => (site = wildcard(site)) && site.test(CUR_HOST));
             if (!panDomain) {
               ~exSitesIndex && exSite.splice(exSitesIndex, 1) && saveData(EXCLUDESITES, uniq(exSite, site => site && typeof site === "string").sort());
-              closeConfigurePage({ isReload: true });
+              closeDialogAndPanel({ isReload: true });
             } else {
               const messageText = IS_CHN
                 ? `<p class="${def.const.seed}.exclusion">${panDomain}</p><p class="${def.const.seed}.clr:8b0000">该网站是被以上包含通配符的泛域名所排除渲染的。</p><p>『确定』将自动取消该泛域名下所有的排除项。</p><p>『管理』您将进入自定义排除站点列表手动处理。</p>`
@@ -2201,7 +2160,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
               if (await panDomainDialog.respond()) {
                 const { exSite } = await getExSitesData();
                 saveData(EXCLUDESITES, uniq(exSite, site => site && typeof site === "string" && !site.endsWith(panDomain.slice(1))).sort());
-                closeConfigurePage({ isReload: true });
+                closeDialogAndPanel({ isReload: true });
               } else setCustomExsite();
             }
           } else setCustomExsite();
@@ -2225,30 +2184,30 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           const messageText = `${customExsiteHTML}<p class="${def.const.seed}.list:p"><input id="${def.const.seed}.sdata" type="search"><button id="${def.const.seed}.sdata:search">${searchBtn}</button><button id="${def.const.seed}.sdata:add">${addBtn}</button></p><ul id="${def.const.seed}.vlist">${listContents}</ul>`;
           const [trueButtonText, neutralButtonText, titleText] = IS_CHN ? ["保存数据", "取 消", "自定义排除站点管理"] : ["Save", "Cancel", "Manage Customized Exclusions"];
           const frDialog = new FrDialogBox({ trueButtonText, neutralButtonText, messageText, titleText });
-          const [dsNode, dssNode, dsaNode, ddNode] = ["sdata", "sdata\\:search", "sdata\\:add", "vlist"].map(l => qS(`#${def.const.seed}\\.${l}`, def.var.dialogIf));
+          const [dsNode, dssNode, dsaNode, ddNode] = ["sdata", "sdata\\:search", "sdata\\:add", "vlist"].map(l => qS(`#${def.const.seed}\\.${l}`, frDialog.shadow));
           if (ddNode && dsNode && dssNode && dsaNode) {
-            dsNode.addEventListener("keydown", e => e.key === "Enter" && void (stopEventPropagation(e, { prevent: true }), dssNode.focus(), dssNode.click()));
-            removeKeyboardEvent(dsNode);
-            dsNode.addEventListener("input", () => void (dsNode.value = dsNode.value.replace(/[^-a-z0-9.*:\][]|^https?:\/\//gi, "").toLowerCase()));
-            dsNode.addEventListener("focus", () => void dsNode.removeAttribute("class"));
-            dsaNode.addEventListener("click", () => {
+            eventManager.add(dsNode, "keydown", e => e.key === "Enter" && (stopEventPropagation(e, { prevent: true }), dssNode.focus(), dssNode.click()), { signal: frDialog.signal });
+            removeKeyboardEvent({ signal: frDialog.signal }, dsNode);
+            eventManager.add(dsNode, "input", () => (dsNode.value = dsNode.value.replace(/[^-a-z0-9.*:\][]|^https?:\/\//gi, "").toLowerCase()), { signal: frDialog.signal });
+            eventManager.add(dsNode, "focus", () => dsNode.removeAttribute("class"), { signal: frDialog.signal });
+            const dsaNodeClickEvent = () => {
               const resDomain = dsNode.value.trim().toLowerCase();
               const regexp = `^(?=^.{3,255}$)(\\*\\.)?[a-z0-9][-a-z0-9]{0,62}(\\.[a-z0-9][-a-z0-9]{0,62})+(:[0-9]{1,5})?$|^(?![0-9])(?!-)(?!.*--)[A-Za-z0-9-]{2,62}[a-zA-Z0-9](:[0-9]{1,5})?$|^\\[(([0-9a-fA-F]{1,4}:){7}([0-9a-fA-F]{1,4}|:)|(([0-9a-fA-F]{1,4}:){0,5}([0-9a-fA-F]{1,4})?::([0-9a-fA-F]{1,4}:){0,5}([0-9a-fA-F]{1,4})?)|::([0-9a-fA-F]{1,4}:){0,6}([0-9a-fA-F]{1,4})?)\\](:[0-9]{1,5})?$`;
               const domainRegex = new RegExp(regexp);
               const exDomain = resDomain.replace(/:(80|443)$/, "");
               if (!domainRegex.test(exDomain) || exSite.includes(exDomain)) return (dsNode.className = `${def.const.seed}.clr:ff0000`);
-              safeRemoveNode(`#${def.const.seed}\\.temp`, def.var.dialogIf);
-              length++;
+              safeRemoveNode(`#${def.const.seed}\\.temp`, frDialog.shadow) && length++;
               const newNode = cE("li", { id: `${def.const.seed}.vlist.item:${length}`, class: `${def.const.seed}.gradient.bg` });
               const domainName = convertHtmlToText(exDomain);
               newNode.innerHTML =
                 tTP.createHTML(`<span>${String(length + 1).padStart(2, "0")}. </span><span class="${def.const.seed}.domainlist" title="${domainName}">${domainName}</span>`) +
                 tTP.createHTML(`<span>[<a id="${def.const.seed}.vlist.item.link:${length}" class="${def.const.seed}.clr:8b0000" data-fr-domain="${domainName}">${delText}</a>]</span>`);
               return appendNode(ddNode, newNode), _temp_.push(exDomain), (dsNode.value = ""), (ddNode.scrollTop = ddNode.scrollHeight);
-            });
-            dssNode.addEventListener("click", () => void searchTextAndSelect(dsNode, ddNode, "exsite", "li>:nth-child(2)"));
+            };
+            eventManager.add(dsaNode, "click", dsaNodeClickEvent, { signal: frDialog.signal });
+            eventManager.add(dssNode, "click", () => searchTextAndSelect(dsNode, ddNode, "exsite", "li>:nth-child(2)"), { signal: frDialog.signal });
           }
-          ddNode?.addEventListener("click", event => {
+          const eXddNodeClickEvent = event => {
             const target = event.target;
             if (getNodeName(target) !== "a" || !target.id.startsWith(`${def.const.seed}.vlist.item.link:`)) return;
             const listID = Number(target.id?.match(/\d+$/)?.[0] ?? -1);
@@ -2260,13 +2219,14 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
             target.textContent = isDeleted ? delText : resetText;
             target.className = isDeleted ? `${def.const.seed}.clr:8b0000` : `${def.const.seed}.clr:green`;
             classList.toggle(`${def.const.seed}.list.reset`, !isDeleted);
-          });
+          };
+          eventManager.add(ddNode, "click", eXddNodeClickEvent, { signal: frDialog.signal });
           if (await frDialog.respond()) {
             saveData(EXCLUDESITES, uniq(_temp_, site => site && typeof site === "string").sort());
             const messageText = IS_CHN ? `自定义排除网站数据已成功保存，页面即将刷新。` : `Exclusion site data was saved, refresh now!`;
             const [trueButtonText, titleText] = IS_CHN ? ["感谢使用", "自定义排除网站数据保存"] : ["Thanks", "Customized Exclusions Data Save"];
             const successDialog = new FrDialogBox({ trueButtonText, messageText: `<p class="${def.const.seed}.clr:green">${messageText}</p>`, titleText });
-            if (await successDialog.respond()) closeConfigurePage({ isReload: true });
+            if (await successDialog.respond()) closeDialogAndPanel({ isReload: true });
           }
         }
 
@@ -2274,11 +2234,11 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           const successText = IS_CHN ? "预定义渲染数据成功更新，页面即将刷新！" : "Predefined render data was updated, refresh now!";
           const failedText = IS_CHN ? "预定义渲染数据拉取失败，请尝试重新拉取！" : "Predefined render data pull failed, please retry!";
           await getRenderRules().then(async rules => {
-            rules && saveData(REMOTERENDERDATA, rules);
+            rules && saveData(REMOTERENDERDATA, rules, false);
             msgNode.textContent = rules ? successText : failedText;
             msgNode.className = rules ? `${def.const.seed}.clr:green` : `${def.const.seed}.clr:8b0000`;
             dialog.trueButton.className = dialog.trueButton.removeAttribute("disabled") ?? `${def.class.dbb} ${rules ? def.class.dbbt : def.class.dbbf}`;
-            if (await dialog.respond()) closeConfigurePage({ isReload: true });
+            if (await dialog.respond()) closeDialogAndPanel({ isReload: true });
           });
         }
 
@@ -2319,7 +2279,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
             .then(() => {
               if (NOT_IN_EXCLUSION_LIST) {
                 const font_Set_Menu = `\ufff1\ud83c\udf13 ${IS_CHN ? "字体渲染设置" : "Font Rendering Settings "}${isHotkey ? "(P)" : ""}`;
-                GMregisterMenuCommand(font_Set_Menu, openSettings) && DEBUG("%cInstalling Font_Set_Menu", "color:#808080");
+                GMregisterMenuCommand(font_Set_Menu, openRenderPanel) && DEBUG("%cInstalling Font_Set_Menu", "color:#808080");
                 const exclude_Site_Menu = `\ufff2\u26d4 ${IS_CHN ? "排除渲染" : "Exclude "} ${TOP_HOST} ${isHotkey ? "(X)" : ""}`;
                 GMregisterMenuCommand(exclude_Site_Menu, setExcludeSites) && DEBUG("%cInstalling Exclude_Site_Menu", "color:#808080");
                 const parameter_Set_Menu = `\ufff3\ud83d\udc8e ${IS_CHN ? "高级核心功能设置" : "Advanced Core Settings "}${isHotkey ? "(G)" : ""}`;
@@ -2328,29 +2288,30 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                 const include_Site_Menu = `\ufff4\ud83c\udf40 ${IS_CHN ? "重新渲染" : "Re-rendering "} ${TOP_HOST} ${isHotkey ? "(X)" : ""}`;
                 GMregisterMenuCommand(include_Site_Menu, setIncludeSites) && DEBUG("%cInstalling Include_Site_Menu", "color:#808080");
                 const feed_Back_Menu = `\ufff5\ud83e\udde1 ${IS_CHN ? "向作者反馈错误或建议" : "Feedback to Author "}${isHotkey ? "(T)" : ""}`;
-                GMregisterMenuCommand(feed_Back_Menu, () => void GMopenInTab(def.url.feedback, false)) && DEBUG("%cInstalling Feed_Back_Menu", "color:#808080");
+                GMregisterMenuCommand(feed_Back_Menu, () => GMopenInTab(def.url.feedback, false)) && DEBUG("%cInstalling Feed_Back_Menu", "color:#808080");
               }
             })
-            .then(() => void (isHotkey ? insertHotkey() : DEBUG("%cNo Hotkey_Setting", "color:#a9a9a9")));
+            .then(() => (isHotkey ? insertHotkey() : DEBUG("%cNo Hotkey_Setting", "color:#a9a9a9")));
         }
 
         function insertHotkey() {
-          const handleClickEvent = (func, time, event) => {
+          const clickEventHandler = (func, time, event, currentTime = performance.now()) => {
             stopEventPropagation(event, { prevent: true });
-            const currentTime = performance.now();
             currentTime - def.count.clickTimer > time && (def.count.clickTimer = currentTime) && func();
           };
-          document.addEventListener("keydown", e => {
+          const shotcutKeydownEvent = e => {
             const ekey = (e.altKey || e.key === "Alt" || e.code === "AltRight" || e.code === "AltLeft") && !e.ctrlKey && !e.shiftKey && !e.metaKey;
-            if (e.code === "KeyP" && ekey) handleClickEvent(NOT_IN_EXCLUSION_LIST ? openSettings : setIncludeSites, 1e3, e);
-            else if (e.code === "KeyX" && ekey) handleClickEvent(NOT_IN_EXCLUSION_LIST ? setExcludeSites : setIncludeSites, 1e3, e);
-            else if (e.code === "KeyG" && ekey) handleClickEvent(NOT_IN_EXCLUSION_LIST ? setVipConfigure : setIncludeSites, 1e3, e);
-            else if (e.code === "KeyT" && ekey) handleClickEvent(() => void GMopenInTab(def.url.feedback, false), 1e4, e);
-          }) || DEBUG("%cInstalling Hotkey_Setting", "color:#808080");
+            if (e.code === "KeyP" && ekey) clickEventHandler(NOT_IN_EXCLUSION_LIST ? openRenderPanel : setIncludeSites, 1e3, e);
+            else if (e.code === "KeyX" && ekey) clickEventHandler(NOT_IN_EXCLUSION_LIST ? setExcludeSites : setIncludeSites, 1e3, e);
+            else if (e.code === "KeyG" && ekey) clickEventHandler(NOT_IN_EXCLUSION_LIST ? setVipConfigure : setIncludeSites, 1e3, e);
+            else if (e.code === "KeyT" && ekey) clickEventHandler(() => GMopenInTab(def.url.feedback, false), 1e4, e);
+          };
+          eventManager.add(document, "keydown", shotcutKeydownEvent) || DEBUG("%cInstalling Hotkey_Setting", "color:#808080");
         }
 
-        async function manageDomainsList(domains, domainValues, domainValueIndex, _temp_ = asArray([]), listContents = "") {
+        async function manageDomainsList(domains, domainValues, domainValueIndex) {
           try {
+            let [_temp_, listContents] = [[], ""];
             domains = await GMgetValue(DOMAINFONTSET);
             try {
               domainValues = domains ? [...JSON.parse(decrypt(domains))] : [];
@@ -2372,28 +2333,29 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
             const messageText = `<p class="${def.const.seed}.clr:8b0000 ${def.const.seed}.fs:14p ${def.const.seed}.indent:6p">${noticeText}</p>${searchBtnHTML}<ul id="${def.const.seed}.vlist">${listContents}</ul>`;
             const [trueButtonText, neutralButtonText] = IS_CHN ? ["确认操作，保存数据", "取 消"] : ["Save", "Cancel"];
             const frDialog = new FrDialogBox({ trueButtonText, neutralButtonText, messageText, titleText });
-            const [dsNode, dscNode, dssNode, ddNode] = ["sdata", "sdata\\:clear", "sdata\\:search", "vlist"].map(s => qS(`#${def.const.seed}\\.${s}`, def.var.dialogIf));
+            const [dsNode, dscNode, dssNode, ddNode] = ["sdata", "sdata\\:clear", "sdata\\:search", "vlist"].map(s => qS(`#${def.const.seed}\\.${s}`, frDialog.shadow));
             if (ddNode && dsNode && dscNode && dssNode) {
-              dsNode.addEventListener("keydown", e => e.key === "Enter" && (stopEventPropagation(e, { prevent: true }), dssNode.focus(), dssNode.click()));
-              removeKeyboardEvent(dsNode);
-              dsNode.addEventListener("focus", () => dsNode.removeAttribute("class"));
-              dsNode.addEventListener("input", () => (dsNode.value = dsNode.value.replace(/[^-a-z0-9.]/gi, "").toLowerCase()));
-              dscNode.addEventListener("click", () => (dsNode.removeAttribute("class"), (dsNode.value = ""), (ddNode.scrollTop = 0), dsNode.focus()));
-              dssNode.addEventListener("click", () => searchTextAndSelect(dsNode, ddNode, "domain", "li>:nth-child(2)"));
+              eventManager.add(dsNode, "keydown", e => e.key === "Enter" && (stopEventPropagation(e, { prevent: true }), dssNode.focus(), dssNode.click()), { signal: frDialog.signal });
+              removeKeyboardEvent({ signal: frDialog.signal }, dsNode);
+              eventManager.add(dsNode, "focus", () => dsNode.removeAttribute("class"), { signal: frDialog.signal });
+              eventManager.add(dsNode, "input", () => (dsNode.value = dsNode.value.replace(/[^-a-z0-9.]/gi, "").toLowerCase()), { signal: frDialog.signal });
+              eventManager.add(dscNode, "click", () => (dsNode.removeAttribute("class"), (dsNode.value = ""), (ddNode.scrollTop = 0), dsNode.focus()), { signal: frDialog.signal });
+              eventManager.add(dssNode, "click", () => searchTextAndSelect(dsNode, ddNode, "domain", "li>:nth-child(2)"), { signal: frDialog.signal });
             }
-            ddNode?.addEventListener("click", event => {
+            const ddNodeClickEvent = event => {
               const target = event.target;
               if (getNodeName(target) !== "a" || !target.id.startsWith(`${def.const.seed}.vlist.item.link:`)) return;
               const { classList: domainClassList } = target.parentNode.nextElementSibling;
               const { classList: dateClassList } = target.parentNode.nextElementSibling.nextElementSibling;
               const listID = Number(target.id?.match(/\d+$/)?.[0] ?? -1);
               const isDeleted = typeof target.dataset.del !== "undefined";
-              if (isDeleted) _temp_.RemoveX(target.dataset.del) && delete target.dataset.del;
+              if (isDeleted) asArray(_temp_).RemoveX(target.dataset.del) && delete target.dataset.del;
               else _temp_.push((target.dataset.del = domainValues[listID].domain));
               target.textContent = isDeleted ? delText : resetText;
               target.className = isDeleted ? `${def.const.seed}.clr:8b0000` : `${def.const.seed}.clr:green`;
               [domainClassList, dateClassList].forEach(i => i.toggle(`${def.const.seed}.list.reset`, !isDeleted));
-            });
+            };
+            eventManager.add(ddNode, "click", ddNodeClickEvent, { signal: frDialog.signal });
             if (await frDialog.respond()) {
               let isCurrentSite = false;
               domains = await GMgetValue(DOMAINFONTSET);
@@ -2414,7 +2376,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
               const messageText = `<p class="${def.const.seed}.clr:green">${IS_CHN ? "网站个性化数据已成功保存！" : "Customize data saved successfully!"}</p><p>${changeNotice}</p>`;
               const [trueButtonText, titleText] = IS_CHN ? ["感谢使用", "个性化数据保存"] : ["Thanks", "Customize Data Save"];
               const successDialog = new FrDialogBox({ trueButtonText, messageText, titleText });
-              if (await successDialog.respond()) isCurrentSite && closeConfigurePage({ isReload: true });
+              if (await successDialog.respond()) isCurrentSite && closeDialogAndPanel({ isReload: true });
             }
           } catch (e) {
             ERROR(`${e.name} in ManageDomainsList:`, e.message);
@@ -2423,16 +2385,12 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
 
         /* FONT_LIST_GENERATION_AND_SELECTION */
 
-        function fontSet({ container, fontData }) {
+        function fontSet(host, { container, fontData }) {
           if (!container || typeof container !== "string" || !safeArray.isArray(fontData)) return;
           const isCFPE = FontFaceSetObserver.checkCanvasFingerprintProtection();
           const dlSelector = `#${def.id.fontList} .${def.class.selectFontID} dl`;
           const setFontOpt = item => ({ title: item.ch, sort: item.sort, value: item.en, style: `font-family:'${item.en}'!important`, textContent: item.ch });
           return { fdeleteList: deleteFontSelectList, fresetList: resetFontSelectList, fsearchList: getFontSearchList, fsearch: fontSearch };
-
-          function fontListTrigger(selector, shown = true) {
-            qA(selector, def.var.configIf).forEach(item => void item.classList.toggle(`${def.const.seed}.disp:block`, shown));
-          }
 
           function closeFontSelected(item) {
             const btn = item.parentNode;
@@ -2441,37 +2399,36 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
             if (!safeRemoveNode(btn)) return;
             fontData.push({ ch: text, en: value, sort: Number(sort) || 1 });
             fontData = getUniqueFontlist(fontData).sort((a, b) => a.sort - b.sort);
-            const fontsetNode = qS(`#${def.id.fontsetList}`, def.var.configIf);
+            const fontsetNode = gIN(`#${def.id.fontsetList}`, host);
             const fontsetList = getFontSearchList(def.id.fontName);
             if (fontsetList.length === 0) {
               setValueAndEvent(fontsetNode, CONST_VALUES.fontSelect, "input");
-              qS(`#${def.id.selector}`, def.var.configIf)?.classList.remove(`${def.const.seed}.disp:block`);
-              getCurrentFontName(qS(`#${def.id.fface}`, def.var.configIf)?.checked, selectedFont).then(inputPlaceholder);
+              gIN(`#${def.id.selector}`, host)?.classList.remove(`${def.const.seed}.disp:block`);
+              getCurrentFontName(gIN(`#${def.id.fface}`, host)?.checked, selectedFont).then(r => inputPlaceholder(host, r));
             } else setValueAndEvent(fontsetNode, addSingleQuoteForItem(fontsetList), "input");
           }
 
           function deleteFontSelectList() {
-            const closeNodes = qA(`#${def.id.fontList} .${def.class.close}`, def.var.configIf);
-            closeNodes.forEach(item => void closeFontSelected(item, fontData));
+            gIN(`#${def.id.fontList} .${def.class.close}`, host, true).forEach(item => closeFontSelected(item, fontData));
           }
 
           function resetFontSelectList() {
             deleteFontSelectList(fontData);
-            const fontlistSelectorNode = qS(`#${def.id.fontList} .${def.class.selector}`, def.var.configIf);
+            const fontlistSelectorNode = gIN(`#${def.id.fontList} .${def.class.selector}`, host);
             const resetDefaultFont = INITIAL_VALUES.fontSelect.replace(/['"]/g, "");
             const resetFontCHN = IS_REAL_WEBKIT || (!IS_CHEAT_UA && IS_MACOS) ? "\u82f9\u65b9\u002d\u7b80" : "\u5fae\u8f6f\u96c5\u9ed1";
             const fontlistSelectorHTML = `<a class="${def.class.label}"><span class="${def.const.seed}.bdlr:4px" style="font-family:${INITIAL_VALUES.fontSelect}!important">${resetFontCHN}</span><input type="hidden" name="${def.id.fontName}" sort="0" value="${resetDefaultFont}"/><span class="${def.class.close} ${def.const.seed}.cs:pointer ${def.const.seed}.bdrr:4px" style="font-family:sans-serif!important">\u0026\u0023\u0032\u0031\u0035\u003b</span></a>`;
             fontlistSelectorNode.insertAdjacentHTML("beforeend", tTP.createHTML(fontlistSelectorHTML));
             fontlistSelectorNode.parentNode.classList.add(`${def.const.seed}.disp:block`);
             fontData = fontData.filter(item => item.en !== resetDefaultFont);
-            const cleanerNode = qS(`#${def.id.selector} #${def.id.cleaner}`, def.var.configIf);
-            if (cleanerNode) cleanerNode.onclick = () => void deleteFontSelectList(fontData);
-            const closeNode = qS(`#${def.id.fontList} input[name="${def.id.fontName}"][sort="0"]~.${def.class.close}`, def.var.configIf);
-            if (closeNode) closeNode.onclick = () => void closeFontSelected(closeNode, fontData);
+            const cleanerNode = gIN(`#${def.id.selector} #${def.id.cleaner}`, host);
+            if (cleanerNode) eventManager.add(cleanerNode, "click", () => deleteFontSelectList(fontData), { signal: openRenderPanel.signal });
+            const closeNode = gIN(`#${def.id.fontList} input[name="${def.id.fontName}"][sort="0"]~.${def.class.close}`, host);
+            if (closeNode) eventManager.add(closeNode, "click", () => closeFontSelected(closeNode, fontData), { signal: openRenderPanel.signal });
           }
 
           function getFontSearchList(name) {
-            const nodeArray = qA(`#${def.id.selector} .${def.class.selector} input[name="${name}"]`, def.var.configIf);
+            const nodeArray = gIN(`#${def.id.selector} .${def.class.selector} input[name="${name}"]`, host, true);
             return uniq(nodeArray, null, item => item.value);
           }
 
@@ -2507,31 +2464,31 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                   </span>
                 </span>
               </div>`;
-            const fontListNode = qS(container, def.var.configIf);
-            if (!qS(`#${def.id.selector}`, def.var.configIf) && fontListNode) fontListNode.innerHTML = tTP.createHTML(fHtml);
-            const fontsetNode = qS(`#${def.id.fontsetList}`, def.var.configIf);
-            const submitButton = qS(`#${def.id.submit} .${def.class.submit}`, def.var.configIf);
-            const ffaceT = qS(`#${def.id.fface}`, def.var.configIf);
-            const fselectorT = qS(`#${def.id.fontList} .${def.class.selectFontID} input`, def.var.configIf);
+            const fontListNode = gIN(container, host);
+            if (!gIN(`#${def.id.selector}`, host) && fontListNode) fontListNode.innerHTML = tTP.createHTML(fHtml);
+            const fontsetNode = gIN(`#${def.id.fontsetList}`, host);
+            const submitButton = gIN(`#${def.id.submit} .${def.class.submit}`, host);
+            const ffaceT = gIN(`#${def.id.fface}`, host);
+            const fselectorT = gIN(`#${def.id.fontList} .${def.class.selectFontID} input`, host);
             if (ffaceT && fselectorT && fontsetNode && submitButton) {
-              removeKeyboardEvent(fselectorT);
+              removeKeyboardEvent({ signal: openRenderPanel.signal }, fselectorT);
               changeSelectorStatus(ffaceT.checked, fselectorT, def.class.readonly);
               saveChangeStatus(fontsetNode, CONST_VALUES.fontSelect, submitButton);
-              ffaceT.addEventListener("change", () => void changeSelectorStatus(ffaceT.checked, fselectorT, def.class.readonly));
-              fselectorT.addEventListener("input", () => void searchEvents(fselectorT.value.trim()));
-              fselectorT.addEventListener("click", selectorEvent);
+              eventManager.add(ffaceT, "change", () => changeSelectorStatus(ffaceT.checked, fselectorT, def.class.readonly), { signal: openRenderPanel.signal });
+              eventManager.add(fselectorT, "input", () => searchEvents(fselectorT.value.trim()), { signal: openRenderPanel.signal });
+              eventManager.add(fselectorT, "click", selectorEvent, { signal: openRenderPanel.signal });
             }
 
             function selectorEvent(event) {
               stopEventPropagation(event);
               const value = event.target.value.trim();
               if (value.length === 0) {
-                const selectFontNode = qS(dlSelector, def.var.configIf);
+                const selectFontNode = gIN(dlSelector, host);
                 fontData = getUniqueFontlist(fontData).sort((a, b) => a.sort - b.sort);
                 selectFontNode.innerHTML = setPermitContent(isCFPE, fontData.length + getFontSearchList(def.id.fontName).length);
                 if (fontData.length) fontData.forEach(item => selectFontNode && GMaddElement(selectFontNode, "dd", setFontOpt(item)));
                 else selectFontNode.innerHTML += tTP.createHTML(`<dd>${IS_CHN ? "\u65e0\u53ef\u7528\u6570\u636e" : "No data available"}</dd>`);
-                fontListTrigger(dlSelector);
+                selectFontNode.classList.toggle(`${def.const.seed}.disp:block`, true);
                 syncScrollTransform(dlSelector, true);
                 clickEvents();
               } else searchEvents(value);
@@ -2544,19 +2501,20 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
             }
 
             function selectorHidden() {
-              document.removeEventListener("click", selectorHidden);
+              eventManager.remove(document, "click", selectorHidden);
               syncScrollTransform(dlSelector, false);
-              fontListTrigger(dlSelector, false);
-              const selectorInput = qS(`#${def.id.fontList} .${def.class.selectFontID} input`, def.var.configIf);
+              const dl = gIN(dlSelector, host);
+              dl.classList.toggle(`${def.const.seed}.disp:block`, false) || (dl.textContent = "");
+              const selectorInput = gIN(`#${def.id.fontList} .${def.class.selectFontID} input`, host);
               if (selectorInput) selectorInput.value = "";
             }
 
             function searchEvents(searchText, matched) {
-              const selectFontNode = qS(dlSelector, def.var.configIf);
-              fontListTrigger(dlSelector, (matched = false));
+              const selectFontNode = gIN(dlSelector, host);
+              selectFontNode.classList.toggle(`${def.const.seed}.disp:block`, (matched = false));
               fontData = getUniqueFontlist(fontData).sort((a, b) => a.sort - b.sort);
               if (!fontData.length || !selectFontNode) return;
-              fontListTrigger(dlSelector);
+              selectFontNode.classList.toggle(`${def.const.seed}.disp:block`, true);
               const sRegExp = new RegExp(searchText.replace(/[.:?*+^$[\-=\](){}/\\|]/g, "\\$&"), "i");
               selectFontNode.innerHTML = setPermitContent(isCFPE, fontData.length + getFontSearchList(def.id.fontName).length);
               fontData.forEach(item => (sRegExp.test(item.ch) || sRegExp.test(item.en)) && (selectFontNode && GMaddElement(selectFontNode, "dd", setFontOpt(item)), (matched = true)));
@@ -2569,8 +2527,8 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                 stopEventPropagation(event);
                 const target = event.target;
                 const [value, sort] = ["value", "sort"].map(name => target.getAttribute(name));
-                const selector = qS(`#${def.id.fontList} .${def.class.selector}`, def.var.configIf);
-                const fontsetNode = qS(`#${def.id.fontsetList}`, def.var.configIf);
+                const selector = gIN(`#${def.id.fontList} .${def.class.selector}`, host);
+                const fontsetNode = gIN(`#${def.id.fontsetList}`, host);
                 if (value && sort && selector && fontsetNode) {
                   const nodeHTML = `<a class="${def.class.label}"><span class="${def.const.seed}.bdlr:4px" style="font-family:'${value}'!important">${target.textContent}</span><input type="hidden" name="${def.id.fontName}" sort="${sort}" value="${value}"/><span class="${def.class.close} ${def.const.seed}.cs:pointer ${def.const.seed}.bdrr:4px" style="font-family:Times,monospace!important">\u0026\u0023\u0032\u0031\u0035\u003b</span></a>`;
                   selector.insertAdjacentHTML("beforeend", tTP.createHTML(nodeHTML));
@@ -2578,17 +2536,17 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                   fontData = getUniqueFontlist(fontData).sort((a, b) => a.sort - b.sort);
                   fontData = fontData.filter(item => item.en !== value);
                   setValueAndEvent(fontsetNode, addSingleQuoteForItem(getFontSearchList(def.id.fontName)), "input");
-                  const cleanerNode = qS(`#${def.id.selector} #${def.id.cleaner}`, def.var.configIf);
-                  if (cleanerNode) cleanerNode.onclick = () => void deleteFontSelectList(fontData);
-                  const closeNode = qS(`#${def.id.fontList} input[name="${def.id.fontName}"][sort="${sort}"]~.${def.class.close}`, def.var.configIf);
-                  if (closeNode) closeNode.onclick = () => void closeFontSelected(closeNode, fontData);
+                  const cleanerNode = gIN(`#${def.id.selector} #${def.id.cleaner}`, host);
+                  if (cleanerNode) eventManager.add(cleanerNode, "click", () => deleteFontSelectList(fontData), { signal: openRenderPanel.signal });
+                  const closeNode = gIN(`#${def.id.fontList} input[name="${def.id.fontName}"][sort="${sort}"]~.${def.class.close}`, host);
+                  if (closeNode) eventManager.add(closeNode, "click", () => closeFontSelected(closeNode, fontData), { signal: openRenderPanel.signal });
                 }
                 selectorHidden();
               };
-              const promptAction = () => void (cache.remove(FONTCHECKLIST), !isCFPE && GMopenInTab(`${def.url.feedback}/46`, false), reload());
-              qA(`#${def.id.fontList} .${def.class.selectFontID} dl dd`, def.var.configIf).forEach(item => void (item.onclick = parseClick));
-              qS(`#${def.id.fontList} .${def.class.selectFontID} dl dt`, def.var.configIf)?.addEventListener("click", promptAction);
-              document.addEventListener("click", selectorHidden);
+              const promptAction = () => (cache.remove(FONTCHECKLIST), !isCFPE && GMopenInTab(`${def.url.feedback}/46`, false), reload());
+              gIN(`#${def.id.fontList} .${def.class.selectFontID} dl dd`, host, true).forEach(item => eventManager.add(item, "click", parseClick, { signal: openRenderPanel.signal }));
+              eventManager.add(gIN(`#${def.id.fontList} .${def.class.selectFontID} dl dt`, host), "click", promptAction, { signal: openRenderPanel.signal });
+              eventManager.add(document, "click", selectorHidden, { signal: openRenderPanel.signal });
             }
           }
 
@@ -2606,11 +2564,14 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           target.dispatchEvent(new Event(eventName));
         }
 
-        function syncScrollTransform(selector, enable) {
-          const [scrollbar, target] = [`fr-scrollbar`, selector].map(s => qS(s, def.var.configIf));
-          def.var[`sync_scroll_${selector}`] = def.var[`sync_scroll_${selector}`] ?? (e => target && (target.style.transform = `translateY(-${e.currentTarget.scrollTop}px)`));
-          scrollbar?.[enable ? "addEventListener" : "removeEventListener"]("scroll", def.var[`sync_scroll_${selector}`], false);
-          target.style.transform = enable ? `translateY(-${scrollbar?.scrollTop ?? 0}px)` : delete def.var[`sync_scroll_${selector}`] && null;
+        function syncScrollTransform(selector, isScollerEnabled, host = qS("fr-configure")) {
+          const [scrollbar, target] = ["fr-scrollbar", selector].map(s => gIN(s, host));
+          if (!scrollbar || !target) return;
+          const key = `_sync_${selector.replace(/[^a-z0-9]/gi, "")}`;
+          if (isScollerEnabled) {
+            if (!target[key]) target[key] = e => (target.style.transform = `translateY(-${e.currentTarget.scrollTop}px)`);
+            void (eventManager.add(scrollbar, "scroll", target[key], { signal: openRenderPanel.signal }), (target.style.transform = `translateY(-${scrollbar.scrollTop}px)`));
+          } else target[key] && void (eventManager.remove(scrollbar, "scroll", target[key], { signal: openRenderPanel.signal }), (target.style.transform = ""), delete target[key]);
         }
 
         async function generateFontFaceCSS(fontArray, fontName, overrideData) {
@@ -2636,11 +2597,10 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           try {
             const predefinedSitesProps = await getFontScaleDef();
             const currentDomainProps = asArray(safeObject.entries(predefinedSitesProps)).FindX(([domain]) => domain && CUR_HOST.endsWith(domain.replace(/:(?:80|443)$/, "")))?.[1];
-            if (!currentDomainProps || getObjectType.call(currentDomainProps) !== "[object Object]") throw new Error("No extra correction properties");
-            const { Window: W, Element: E, HTMLElement: H } = currentDomainProps;
-            def.array.props = { window: uniq(W), element: uniq(E), html: uniq(H) };
+            if (!currentDomainProps || oS.call(currentDomainProps) !== "[object Object]") throw new Error("No extra correction properties");
+            safeObject.assign(def.array.props, { window: uniq(currentDomainProps.Window), element: uniq(currentDomainProps.Element), html: uniq(currentDomainProps.HTMLElement) });
           } catch (e) {
-            DEBUG(`CorrectFontScaleOffset${IN_FRAMES}:\r\n%c${e.message} for ${CUR_HOST}`, "display:block;padding:0 0 0 18px;color:#808080");
+            DEBUG(`CorrectFontScaleOffset${IN_FRAMES}:\r\n%c${e.message} for ${CUR_HOST}`, "color:#808080");
           }
           adjustCoordinateOffset({ cur: def.var.curScale, props: def.array.props });
         }
@@ -2663,38 +2623,41 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           return `${prefix}:is(${codeSelectors}):not([class*='icon' i],[class*='symbols' i],md-icon){font-family:var(--fr-mono-font),${baseMonoFont}!important;text-shadow:var(--fr-mono-shadow)!important;-webkit-text-stroke:var(--fr-no-stroke)!important;font-feature-settings:var(--fr-mono-feature, unset)!important;${userSelect}}${prefix}:is(${codeSelectors})::selection{color:#fff!important;background:#fe7300ed!important;-webkit-text-stroke-width:0!important;text-shadow:1px 1px 1px #4c4c4ccc!important}`;
         }
 
-        function adoptMainStyleSheet({ review = false } = {}) {
-          const sheet = getMainStyleSheets({ primary: true }) ?? object();
-          if ((sheet.id || getSheetMetadata(sheet).id) === def.id.rndStyle) return true;
-          const cssText = tStyle.replace(DOCUMENTID_REGEXP, `#${document.documentElement.id}`);
-          const result = setAdoptedStyleSheets({ target: document, css: cssText, id: def.id.rndStyle, writable: false, primary: true });
-          const showInfo = (s, i) => void (review ? INFO(`%c[MO][READOPTEDSTYLE]${i}: #${s}`, fullStyle("#a52a2a")) : COUNT(`[ADOPTEDSTYLE][ID:${s}]${i}`));
-          return result && !showInfo(def.id.rndStyle, IN_FRAMES);
+        function showAdoptMainStyleResult(s, i, r) {
+          return r ? INFO(`%c[MO][READOPTEDSTYLE]${i}: #${s}`, fullStyle("#a52a2a")) : COUNT(`[ADOPTEDSTYLE][ID:${s}]${i}`);
         }
 
-        async function operateConfigure() {
+        function adoptMainStyleSheet({ review = false } = {}) {
+          const style = getStyleSheets({ primary: true })?.[0] ?? object();
+          if (style.id === def.id.rndStyle) return true;
+          const cssText = tStyle.replace(DOCUMENTID_REGEXP, `#${document.documentElement.id}`);
+          const result = setAdoptedStyleSheets({ target: document, css: cssText, id: def.id.rndStyle, writable: false, primary: true });
+          return result && !showAdoptMainStyleResult(def.id.rndStyle, IN_FRAMES, review);
+        }
+
+        async function configureRenderPanel(host) {
           try {
             const fontData = await getAvailableFontData();
-            const fontSetFn = fontSet({ container: `#${def.id.fontList} .${def.class.fontList}`, fontData });
+            const fontSetFn = fontSet(host, { container: `#${def.id.fontList} .${def.class.fontList}`, fontData });
             const nodeIDSet = ["fface", "smooth", "fontScale", "strokeSize", "shadowSize", "renderCanvas", "color", "cssinclued", "cssexclude"];
-            const [ffaceT, smoothT, fontScaleT, strokeT, shadowsT, canvasT, colorshowT, fontCssT, fontExT] = nodeIDSet.map(id => qS(`#${def.id[id]}`, def.var.configIf));
+            const [ffaceT, smoothT, fontScaleT, strokeT, shadowsT, canvasT, colorshowT, fontCssT, fontExT] = nodeIDSet.map(id => gIN(`#${def.id[id]}`, host));
             const fieldIDSet = ["shadowColor", "cSwitch", "eSwitch", "fontCss", "fontEx", "backup", "mono"];
-            const [shadowColorNode, cSwitch, eSwitch, includeNode, excludeNode, backupButton, customMonoNode] = fieldIDSet.map(id => qS(`#${def.id[id]}`, def.var.configIf));
-            const [resetButton, submitButton, cancelButton] = ["reset", "submit", "cancel"].map(type => qS(`#${def.id.submit} .${def.class[type]}`, def.var.configIf));
+            const [shadowColorNode, cSwitch, eSwitch, includeNode, excludeNode, backupButton, customMonoNode] = fieldIDSet.map(id => gIN(`#${def.id[id]}`, host));
+            const [resetButton, submitButton, cancelButton] = ["reset", "submit", "cancel"].map(type => gIN(`#${def.id.submit} .${def.class[type]}`, host));
             fontSelectionAndCustomFonts(fontSetFn);
-            removeKeyboardEvent(fontScaleT, strokeT, shadowsT, colorshowT, fontCssT, fontExT);
+            removeKeyboardEvent({ signal: openRenderPanel.signal }, fontScaleT, strokeT, shadowsT, colorshowT, fontCssT, fontExT);
             saveChangeStatus(fontCssT, CONST_VALUES.fontCSS, submitButton);
             saveChangeStatus(fontExT, CONST_VALUES.fontEx, submitButton);
             saveChangeStatus(ffaceT, CONST_VALUES.fontFace, submitButton);
             saveChangeStatus(smoothT, CONST_VALUES.fontSmooth, submitButton);
-            const inputFont = qS(`#${def.id.fontList} .${def.class.selectFontID} input`, def.var.configIf);
-            const drawScale = getFontSizeScale(fontScaleT, submitButton, def.var["fr-scale"]);
+            const inputFont = gIN(`#${def.id.fontList} .${def.class.selectFontID} input`, host);
+            const drawScale = getFontSizeScale(fontScaleT, submitButton);
             const fixViewportT = getFixViewportBool(fontScaleT, submitButton);
-            const drawStrock = getFontsStroke(strokeT, submitButton, def.var["fr-stroke"]);
+            const drawStrock = getFontsStroke(strokeT, submitButton);
             const { fixStrokeT, fixShadowT, lazyloadT } = getFixStrokeBool(strokeT, submitButton);
-            const drawShadow = getFontShadow(shadowsT, shadowColorNode, submitButton, def.var["fr-shadow"]);
+            const drawShadow = getFontShadow(shadowsT, shadowColorNode, submitButton);
             const colorReg = /^(?:#[0-9A-F]{8}|currentcolor)$/i;
-            const colorPickerT = getColorAndColorPicker(colorshowT, submitButton, CONST_VALUES.shadowColor, colorReg);
+            const colorPickerT = getColorAndColorPicker(colorshowT, submitButton, CONST_VALUES.shadowColor, colorReg, Symbol.for("FRColorPicker"));
             const initialSettings = { ffaceT, smoothT, fontScaleT, fixViewportT, strokeT, fixStrokeT, lazyloadT, fixShadowT };
             const finalSettings = { ...initialSettings, shadowsT, canvasT, colorshowT, colorReg, fontCssT, fontExT, colorPickerT };
             getAndMonitorCurrentFont(ffaceT, inputFont);
@@ -2706,9 +2669,9 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
             controlResetButton(resetButton, fontSetFn, finalSettings, { drawScale, drawStrock, drawShadow });
             controlSubmitButton(submitButton, fontSetFn, finalSettings);
             controlBackupButton(backupButton, isBackupFunction);
-            cancelButton?.addEventListener("click", closeConfigurePage);
+            eventManager.add(cancelButton, "click", () => closeDialogAndPanel({ host }), { signal: openRenderPanel.signal });
           } catch (e) {
-            ERROR(`${e.name} in OperateConfigure: %s (%s)`, e.message, def.array.exps.push(`[operateConfigure]: ${e}`));
+            ERROR(`${e.name} in ConfigureRenderPanel: %s (%s)`, e.message, def.array.exps.push(`[configureRenderPanel]: ${e}`));
           }
 
           async function getAvailableFontData() {
@@ -2717,9 +2680,8 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
               if (safeArray.isArray(cachedFontCheckList) && cachedFontCheckList.length) return DEBUG("%cLoad font data cache", "color:#008000;font-weight:700"), uniq(cachedFontCheckList);
               DEBUG("%cStart real-time font detect", "color:#dc143c;font-weight:700");
               const fontCheckList = await detectAvailableFonts();
-              const uniqueFontCheckList = uniq(fontCheckList);
-              cache.set(FONTCHECKLIST, uniqueFontCheckList, 2592e6);
-              return uniqueFontCheckList;
+              cache.set(FONTCHECKLIST, fontCheckList, 2592e6);
+              return fontCheckList;
             } catch (e) {
               return cache.remove(FONTCHECKLIST), ERROR(`${e.name} in GetAvailableFontData: %s (%s)`, e.message, def.array.exps.push(`[getAvailableFontData]: ${e}`)), [];
             }
@@ -2735,7 +2697,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           function fontSelectionAndCustomFonts(fontSetFn) {
             try {
               fontSetFn?.fsearch();
-              qS(`#${def.id.fonttooltip}`, def.var.configIf)?.addEventListener("dblclick", async e => {
+              const cusmotFontNodeDblclickEvent = async e => {
                 stopEventPropagation(e, { prevent: true });
                 let savedFontListString = "";
                 const cusFontList = await GMgetValue(CUSTOMFONTS);
@@ -2751,10 +2713,10 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                 const [trueButtonText, falseButtonText] = IS_CHN ? ["保 存", "帮助文档"] : ["Save", "Help"];
                 const [neutralButtonText, titleText] = IS_CHN ? ["取 消", "自定义字体表"] : ["Cancel", "Custom Font Library"];
                 const frDialog = new FrDialogBox({ trueButtonText, falseButtonText, neutralButtonText, messageText, titleText });
-                const [fontlistNode, featureNode, variantNode] = ["fontlist", "feature", "variant"].map(i => qS(`#${def.const.seed}\\.custom\\.${i}`, def.var.dialogIf));
-                removeKeyboardEvent(fontlistNode, featureNode, variantNode);
+                const [fontlistNode, featureNode, variantNode] = ["fontlist", "feature", "variant"].map(i => qS(`#${def.const.seed}\\.custom\\.${i}`, frDialog.shadow));
+                removeKeyboardEvent({ signal: frDialog.signal }, fontlistNode, featureNode, variantNode);
                 let [customFontlist, customFeature, customVariant] = [fontlistNode.value.trim(), featureNode.value.trim(), variantNode.value.trim()];
-                qS(`#${def.const.seed}\\.addTools`, def.var.dialogIf)?.addEventListener("click", () => {
+                const addToolClickEvent = () => {
                   const chNameText = IS_CHN
                     ? `请输入「中文字体家族名称」：\r\n(例如：鸿蒙黑体，仅支持半角输入模式，包括中文、日文、韩文、英文，数字、小数点、减号、下划线、空格、@)\r\n(如没有中文字体名称，可使用英文或其他语言名称来替代)`
                     : `𝐏𝐥𝐞𝐚𝐬𝐞 𝐞𝐧𝐭𝐞𝐫 𝐭𝐡𝐞 '𝐂𝐡𝐢𝐧𝐞𝐬𝐞 𝐅𝐨𝐧𝐭 𝐍𝐚𝐦𝐞':\r\n(e.g. 鸿蒙黑体, only half-width input mode is supported, including Chinese, Japanese, Korean, English, numbers, decimal point, minus sign, underscore, space, @)\r\n(𝐈𝐟 𝐧𝐨 𝐂𝐡𝐢𝐧𝐞𝐬𝐞 𝐟𝐨𝐧𝐭𝐧𝐚𝐦𝐞, 𝐮𝐬𝐞 𝐄𝐧𝐠𝐥𝐢𝐬𝐡 𝐨𝐫 𝐚𝐧𝐨𝐭𝐡𝐞𝐫 𝐢𝐧𝐬𝐭𝐞𝐚𝐝)`;
@@ -2781,10 +2743,11 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                       fontlistNode.scrollTop = fontlistNode.scrollHeight;
                     } else alert(IS_CHN ? "英文字体家族名称 格式输入错误！" : "English Fontname Input Format Error!");
                   } else alert(IS_CHN ? "中文字体家族名称 格式输入错误！" : "Chinese Fontname Input Format Error!");
-                });
-                fontlistNode?.addEventListener("change", () => (customFontlist = standardizeString(fontlistNode, true, false)));
-                featureNode?.addEventListener("change", () => (customFeature = standardizeString(featureNode, true, true, /[^\w",\- ]/g)));
-                variantNode?.addEventListener("change", () => (customVariant = standardizeString(variantNode, true, true, /[^\w",\- ]/g)));
+                };
+                eventManager.add(qS(`#${def.const.seed}\\.addTools`, frDialog.shadow), "click", addToolClickEvent, { signal: frDialog.signal });
+                eventManager.add(fontlistNode, "change", () => (customFontlist = standardizeString(fontlistNode, true, false)), { signal: frDialog.signal });
+                eventManager.add(featureNode, "change", () => (customFeature = standardizeString(featureNode, true, true, /[^\w",\- ]/g)), { signal: frDialog.signal });
+                eventManager.add(variantNode, "change", () => (customVariant = standardizeString(variantNode, true, true, /[^\w",\- ]/g)), { signal: frDialog.signal });
                 if (await frDialog.respond()) {
                   customFeature || customVariant ? saveData(CUSTOMPROPERTY, { feature: customFeature, variant: customVariant }) : GMdeleteValue(CUSTOMPROPERTY);
                   const regex = /{\s*"ch":\s*"@?[^"]+"\s*,\s*"en":\s*"@?[^"\uFF00-\uFFEF\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF]+"\s*(?:,\s*"ps":\s*"[^"]+"\s*)?}/g;
@@ -2796,38 +2759,39 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                       : `<p class="${def.const.seed}.clr:indigo">Custom font library initialized successfully!<p><p>The Fontlist cache has been rebuilt and reload.</p>`;
                     const [trueButtonText, titleText] = IS_CHN ? ["确 定", "自定义字体数据重置"] : ["OK", "Customized FontData Reset"];
                     const successDialog = new FrDialogBox({ trueButtonText, messageText, titleText });
-                    if (await successDialog.respond(cache.remove(FONTCHECKLIST))) closeConfigurePage({ isReload: true });
+                    if (await successDialog.respond(cache.remove(FONTCHECKLIST))) closeDialogAndPanel({ isReload: true, host });
                   } else if (safeArray.isArray(fontListArray) && fontListArray.length > 0) {
-                    saveData(CUSTOMFONTS, getNonDuplicateFontArray(getUniqueFontlist(fontListArray.map(JSON.parse)), fontCheck));
+                    saveData(CUSTOMFONTS, getNonDuplicateFontArray(getUniqueFontlist(fontListArray.map(JSON.parse)), [...fontCheck]));
                     const messageText = IS_CHN
                       ? `<p class="${def.const.seed}.clr:green">您所提交的自定义字体已保存成功！<p><p>字体列表全局缓存已自动重建，当前页面即将刷新。</p><p class="${def.const.seed}.clr:ff7f50 ${def.const.seed}.fs:12p">注：格式错误或重复的字体代码将被自动过滤。</p>`
                       : `<p class="${def.const.seed}.clr:green">The customized font saved successfully!<p><p>The Fontlist cache has been rebuilt and reload.</p><p class="${def.const.seed}.clr:ff7f50 ${def.const.seed}.fs:12p">Note: Incorrectly or duplicate fonts were filtered.</p>`;
                     const [trueButtonText, titleText] = IS_CHN ? ["确 定", "自定义字体数据保存"] : ["OK", "Customized FontData Save"];
                     const successDialog = new FrDialogBox({ trueButtonText, messageText, titleText });
-                    if (await successDialog.respond(cache.remove(FONTCHECKLIST))) closeConfigurePage({ isReload: true });
+                    if (await successDialog.respond(cache.remove(FONTCHECKLIST))) closeDialogAndPanel({ isReload: true, host });
                   } else {
                     const messageText = IS_CHN
                       ? `<p class="${def.const.seed}.clr:crimson">您所提交的自定义字体数据格式有误，请重新输入。<p><p>注意：先前提交的信息已自动保存至剪切板中。</p>`
                       : `<p class="${def.const.seed}.clr:crimson">The custom Fontdata is incorrectly.<p><p>Note: Previous content saved to the clipboard.</p>`;
                     const [trueButtonText, titleText] = IS_CHN ? ["确 定", "字体表数据格式错误"] : ["OK", "Font Library Data Format Error"];
                     const errorDialog = new FrDialogBox({ trueButtonText, messageText, titleText });
-                    if (await errorDialog.respond()) return copyToClipboard(customFontlist), dblClick(qS(`#${def.id.fonttooltip}`, def.var.configIf));
+                    if (await errorDialog.respond()) return copyToClipboard(customFontlist), dblClick(gIN(`#${def.id.fonttooltip}`, host));
                   }
                 } else GMopenInTab(`${GUIDELINE_URL}${IS_CHN ? "#自定义字体的添加" : "#adding-custom-fonts"}`, false);
-              });
+              };
+              eventManager.add(gIN(`#${def.id.fonttooltip}`, host), "dblclick", cusmotFontNodeDblclickEvent, { signal: openRenderPanel.signal });
             } catch (e) {
               ERROR(`${e.name} in FontSelectionAndCustomFonts: %s (%s)`, e.message, def.array.exps.push(`[fontSelectionAndCustomFonts]: ${e}`));
             }
           }
 
-          function checkTextareaFormat(textarea, type) {
-            const handleInput = async event => {
+          function checkTextareaFormat(textarea, type, signal) {
+            const handleTextareaInput = async event => {
               const target = event.target;
               const value = target.value.trim();
               if (value.length === 0) return target.classList.remove(`${def.const.seed}.bd:crimson`);
               try {
-                const parsedValue = JSON.parse(value);
-                if (type === "object" && getObjectType.call(parsedValue) !== "[object Object]") throw new Error("Format Error");
+                const parsedValue = JSON.parse(type === "array" ? value.replace(/,\s+]$/, "]") : type === "object" ? value.replace(/,\s+}$/, "}") : value);
+                if (type === "object" && oS.call(parsedValue) !== "[object Object]") throw new Error("Format Error");
                 if (type === "array" && (!safeArray.isArray(parsedValue) || asArray(parsedValue).SomeX(v => typeof v !== "string"))) throw new Error("Format Error");
                 const previousCursorPosition = target.selectionStart;
                 const formattedValue = JSON.stringify(parsedValue, null, 4);
@@ -2838,12 +2802,13 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                 target.classList.add(`${def.const.seed}.bd:crimson`);
               }
             };
-            textarea?.addEventListener("change", event => standardizeString(event.target, true, false) && handleInput(event));
-            textarea?.addEventListener("input", handleInput);
+            const formatTextarea = event => standardizeString(event.target, true, false) && handleTextareaInput(event);
+            eventManager.add(textarea, "change", formatTextarea, signal);
+            eventManager.add(textarea, "input", handleTextareaInput, signal);
           }
 
           function setFontOverrideDefTrigger(savedData) {
-            qS(`#${def.const.seed}\\.fontrewrite\\.def`, def.var.configIf)?.addEventListener("dblclick", async e => {
+            const fontRewriteDblclickEvent = async e => {
               stopEventPropagation(e, { prevent: true });
               const _fontOverrideDef = JSON.stringify(savedData, null, 4);
               const rewriteText = IS_CHN
@@ -2858,9 +2823,9 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                 : rewriteText;
               const [trueButtonText, neutralButtonText, titleText] = IS_CHN ? ["确 定", "取 消", "自定义字体重写数据"] : ["OK", "Cancel", "Customized Font-Rewrite Data"];
               const frDialog = new FrDialogBox({ trueButtonText, neutralButtonText, messageText, titleText });
-              const [fixInputNode, fontOverrideNode] = ["fixinput", "fontoverride\\.defarray"].map(s => qS(`#${def.const.seed}\\.${s}`, def.var.dialogIf));
-              removeKeyboardEvent(fontOverrideNode);
-              checkTextareaFormat(fontOverrideNode, "array");
+              const [fixInputNode, fontOverrideNode] = ["fixinput", "fontoverride\\.defarray"].map(s => qS(`#${def.const.seed}\\.${s}`, frDialog.shadow));
+              removeKeyboardEvent({ signal: frDialog.signal }, fontOverrideNode);
+              checkTextareaFormat(fontOverrideNode, "array", { signal: frDialog.signal });
               if (await frDialog.respond()) {
                 const fontOverrideDefValue = fontOverrideNode.value.trim();
                 try {
@@ -2878,36 +2843,38 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                   const messageText = IS_CHN ? `自定义字体重写数据已成功保存！页面即将刷新。` : `Custom-font-rewrite-data was saved, refresh now!`;
                   const [trueButtonText, titleText] = IS_CHN ? ["确 定", "自定义字体重写数据设置成功"] : ["OK", "Customized Font-rewrite Data Save"];
                   const successDialog = new FrDialogBox({ trueButtonText, messageText: `<p class="${def.const.seed}.clr:green">${messageText}</p>`, titleText });
-                  if (await successDialog.respond()) closeConfigurePage({ isReload: true });
+                  if (await successDialog.respond()) closeDialogAndPanel({ isReload: true, host });
                 } catch (_) {
                   const messageText = IS_CHN ? `自定义字体重写数据格式错误，请重新输入！` : `Custom-font-rewrite-data error, please re-enter!`;
                   const [trueButtonText, titleText] = IS_CHN ? ["确 定", "重写数据格式错误"] : ["OK", "Customized Font-Rewrite Data Error"];
                   const errorDialog = new FrDialogBox({ trueButtonText, messageText: `<p class="${def.const.seed}.clr:8b0000">${messageText}</p>`, titleText });
-                  if (await errorDialog.respond()) dblClick(qS(`#${def.const.seed}\\.fontrewrite\\.def`, def.var.configIf));
+                  if (await errorDialog.respond()) dblClick(gIN(`#${def.const.seed}\\.fontrewrite\\.def`, host));
                 }
               }
-            });
+            };
+            eventManager.add(gIN(`#${def.const.seed}\\.fontrewrite\\.def`, host), "dblclick", fontRewriteDblclickEvent, { signal: openRenderPanel.signal });
           }
 
           function getAndMonitorCurrentFont(fontFaceNode, inputNode) {
-            const handleFontChange = async () => {
-              qS(`#${def.id.renderCanvas}`, def.var.configIf)?.click();
-              qS(`#${def.id.rdCanvas}`, def.var.configIf)?.classList.toggle(`${def.const.seed}.vis:hidden`, !fontFaceNode?.checked);
-              await getCurrentFontName(CONST_VALUES.fontFace, selectedFont).then(inputPlaceholder);
+            const fontRerenderingEvent = async () => {
+              gIN(`#${def.id.renderCanvas}`, host)?.click();
+              gIN(`#${def.id.rdCanvas}`, host)?.classList.toggle(`${def.const.seed}.vis:hidden`, !fontFaceNode?.checked);
+              await getCurrentFontName(CONST_VALUES.fontFace, selectedFont).then(r => inputPlaceholder(host, r));
               if (fontFaceNode?.checked && !CONST_VALUES.fontFace) inputNode?.setAttribute("placeholder", IS_CHN ? "正在恢复之前设置的字体…" : "Restore previous font…");
-              sleep(220)(!CONST_VALUES.fontFace).then(r => r && qS(`#${def.id.submit} .${def.class.submit}[v-Preview="true"]`, def.var.configIf)?.click());
+              sleep(220)(!CONST_VALUES.fontFace).then(r => r && gIN(`#${def.id.submit} .${def.class.submit}[v-Preview="true"]`, host)?.click());
             };
-            getCurrentFontName(CONST_VALUES.fontFace, selectedFont).then(inputPlaceholder);
-            fontFaceNode?.addEventListener("change", handleFontChange);
+            getCurrentFontName(CONST_VALUES.fontFace, selectedFont).then(r => inputPlaceholder(host, r));
+            eventManager.add(fontFaceNode, "change", fontRerenderingEvent, { signal: openRenderPanel.signal });
           }
 
-          function getFontSizeScale(fontScaleNode, submitButton, rangeShadowRoot) {
-            if (!isFontsize || !fontScaleNode || !rangeShadowRoot) return;
+          function getFontSizeScale(fontScaleNode, submitButton) {
+            if (!isFontsize || !fontScaleNode) return;
             try {
               setFontScaleDefTrigger();
-              const drawScale = qS(`#${def.id.scale}`, rangeShadowRoot);
+              const ranger = gIN(`#${def.id.fontSize}>.${def.class.range}`, host);
+              const drawScale = gIN(`#${def.id.scale}`, ranger || null);
               fontScaleNode.value = CONST_VALUES.fontSize === 1 ? "OFF" : CONST_VALUES.fontSize.toFixed(3);
-              rangeSliderWidget(drawScale, fontScaleNode, 3, true);
+              rangeSliderWidget(host, drawScale, fontScaleNode, 3, true);
               checkInputValue(fontScaleNode, drawScale, /^[0-2](\.[0-9]{1,3})?$/, 3, true);
               return drawScale;
             } catch (e) {
@@ -2918,7 +2885,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           }
 
           function setFontScaleDefTrigger() {
-            qS(`#${def.const.seed}\\.fontscale\\.def`, def.var.configIf)?.addEventListener("dblclick", async e => {
+            const fontScaleDblclickEvent = async e => {
               stopEventPropagation(e, { prevent: true });
               const fontScaleDefJSON = await getFontScaleDef();
               const fontScaleDefString = JSON.stringify(fontScaleDefJSON, null, 4);
@@ -2927,36 +2894,37 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                 : `<p class="${def.const.seed}.clr:555 ${def.const.seed}.fs:14p">Fill in the custom site scaling data configuration of the "Font Scaling" in a predetermined format. If you do not understand the meaning of the data, please do not modify it! <span class="${def.const.seed}.clr:crimson">(Suggestion: "<a href="${def.url.feedback}/267#discussioncomment-7161615" target="_blank">Author's proposal</a>")</span></p><p><textarea id="${def.const.seed}.fontscale.defjson">${fontScaleDefString}</textarea></p><p id="${def.const.seed}.warning.en">(If the JSON format is incorrect, font rendering will fail)</p>`;
               const [trueButtonText, neutralButtonText, titleText] = IS_CHN ? ["确 定", "取 消", "站点缩放修正设置数据"] : ["OK", "Cancel", "Sites Scaling Setting Data"];
               const frDialog = new FrDialogBox({ trueButtonText, neutralButtonText, messageText, titleText });
-              const fontScaleNode = qS(`#${def.const.seed}\\.fontscale\\.defjson`, def.var.dialogIf);
-              removeKeyboardEvent(fontScaleNode);
-              checkTextareaFormat(fontScaleNode, "object");
+              const fontScaleNode = qS(`#${def.const.seed}\\.fontscale\\.defjson`, frDialog.shadow);
+              removeKeyboardEvent({ signal: frDialog.signal }, fontScaleNode);
+              checkTextareaFormat(fontScaleNode, "object", { signal: frDialog.signal });
               if (await frDialog.respond()) {
                 const fontScaleDefValue = fontScaleNode.value.trim();
                 try {
                   const fontScaleData = fontScaleDefValue ? JSON.parse(fontScaleDefValue) : object();
-                  if (getObjectType.call(fontScaleData) !== "[object Object]") throw new Error("Format Error");
+                  if (oS.call(fontScaleData) !== "[object Object]") throw new Error("Format Error");
                   saveData(FONTSCALE, fontScaleData);
                   const messageText = IS_CHN ? `站点缩放修正数据已保存，页面即将刷新。` : `Sites-scaling-fix-data was saved, refresh now!`;
                   const [trueButtonText, titleText] = IS_CHN ? ["确 定", "站点缩放修正数据设置成功"] : ["OK", "Sites Scaling-Fix Data Save"];
                   const successDialog = new FrDialogBox({ trueButtonText, messageText: `<p class="${def.const.seed}.clr:green">${messageText}</p>`, titleText });
-                  if (await successDialog.respond()) closeConfigurePage({ isReload: true });
+                  if (await successDialog.respond()) closeDialogAndPanel({ isReload: true, host });
                 } catch (_) {
                   const messageText = IS_CHN ? `站点缩放修正设置数据格式错误，请重新输入！` : `Sites-scaling-fix-data error, please re-enter!`;
                   const [trueButtonText, titleText] = IS_CHN ? ["确 定", "设置数据格式错误"] : ["OK", "Sites Scaling-Fix Data Error"];
                   const errorDialog = new FrDialogBox({ trueButtonText, messageText: `<p class="${def.const.seed}.clr:8b0000">${messageText}</p>`, titleText });
-                  if (await errorDialog.respond()) dblClick(qS(`#${def.const.seed}\\.fontscale\\.def`, def.var.configIf));
+                  if (await errorDialog.respond()) dblClick(gIN(`#${def.const.seed}\\.fontscale\\.def`, host));
                 }
               }
-            });
+            };
+            eventManager.add(gIN(`#${def.const.seed}\\.fontscale\\.def`, host), "dblclick", fontScaleDblclickEvent, { signal: openRenderPanel.signal });
           }
 
           function getFixViewportBool(fontScaleNode, submitButton) {
-            const fixViewportT = qS(`#${def.id.fixViewport}`, def.var.configIf);
+            const fixViewportT = gIN(`#${def.id.fixViewport}`, host);
             if (!isFontsize || !isFixViewport || !fontScaleNode || !fixViewportT) return;
             try {
-              const fviewportNode = qS(`#${def.id.fviewport}`, def.var.configIf);
+              const fviewportNode = gIN(`#${def.id.fviewport}`, host);
               const toggleVisibility = () => fviewportNode?.classList.toggle(`${def.const.seed}.vis:hidden`, fontScaleNode.value === "OFF");
-              fontScaleNode.addEventListener("change", toggleVisibility);
+              eventManager.add(fontScaleNode, "change", toggleVisibility, { signal: openRenderPanel.signal });
               return toggleVisibility(), fixViewportT;
             } catch (e) {
               ERROR(`${e.name} in GetFixViewportBool: %s (%s)`, e.message, def.array.exps.push(`[getFixViewportBool]: ${e}`));
@@ -2965,12 +2933,13 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
             }
           }
 
-          function getFontsStroke(strokeNode, submitButton, rangeShadowRoot) {
-            if (!strokeNode || !rangeShadowRoot) return;
+          function getFontsStroke(strokeNode, submitButton) {
+            if (!strokeNode) return;
             try {
-              const drawStrock = qS(`#${def.id.stroke}`, rangeShadowRoot);
+              const ranger = gIN(`#${def.id.fontStroke}>.${def.class.range}`, host);
+              const drawStrock = gIN(`#${def.id.stroke}`, ranger || null);
               strokeNode.value = CONST_VALUES.fontStroke === 0 ? "OFF" : CONST_VALUES.fontStroke.toFixed(3);
-              rangeSliderWidget(drawStrock, strokeNode, 3);
+              rangeSliderWidget(host, drawStrock, strokeNode, 3);
               checkInputValue(strokeNode, drawStrock, /^[0-1](\.[0-9]{1,3})?$/, 3);
               return drawStrock;
             } catch (e) {
@@ -2983,27 +2952,27 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           function getFixStrokeBool(strokeNode, submitButton) {
             if (!IS_CAUSED_BOLDSTROKEERROR || !strokeNode) return object();
             const strokeFixerNames = ["fixStroke", "fixShadow", "lazyload", "fstroke", "fshadow"];
-            const [fixStrokeT, fixShadowT, lazyloadT, fstrokeT, fshadowT] = strokeFixerNames.map(item => qS(`#${def.id[item]}`, def.var.configIf));
+            const [fixStrokeT, fixShadowT, lazyloadT, fstrokeT, fshadowT] = strokeFixerNames.map(item => gIN(`#${def.id[item]}`, host));
             if (!fixStrokeT || !lazyloadT || !fstrokeT || !fshadowT) return object();
             const handleStrokeChange = () => fstrokeT.classList.toggle(`${def.const.seed}.vis:hidden`, strokeNode.value === "OFF");
             const handleMouseEnter = () => {
               fshadowT.classList.add(`${def.const.seed}.vis:visible`);
               syncScrollTransform(`#${def.id.fshadow}`, true);
               if (!IS_CAUSED_BOLDSHADOWERROR) return;
-              const shadowFixTs = qA(`#${def.id.fshadow}\\.shadow\\.label,#${def.id.fshadow}\\.shadow\\.text`, def.var.configIf);
-              const hasShadow = !Number(qS(`#${def.id.shadowSize}`, def.var.configIf)?.value);
+              const shadowFixTs = gIN(`#${def.id.fshadow}\\.shadow\\.label,#${def.id.fshadow}\\.shadow\\.text`, host, true);
+              const hasShadow = !Number(gIN(`#${def.id.shadowSize}`, host)?.value);
               shadowFixTs.forEach(item => item.classList.toggle(`${def.const.seed}.disp:none`, hasShadow));
             };
-            const handleClick = () => {
+            const handleLazyloadClick = () => {
               lazyloadT && showFixConfig(lazyloadT, "lazyload", !fixStrokeT.checked);
               if (IS_CAUSED_BOLDSHADOWERROR && fixShadowT) showFixConfig(fixShadowT, "fixShadow", !fixStrokeT.checked);
             };
-            const handleMouseLeave = () => void (fshadowT.classList.remove(`${def.const.seed}.vis:visible`), syncScrollTransform(`#${def.id.fshadow}`, false));
+            const handleMouseLeave = () => (fshadowT.classList.remove(`${def.const.seed}.vis:visible`), syncScrollTransform(`#${def.id.fshadow}`, false));
             try {
-              strokeNode.addEventListener("change", handleStrokeChange);
-              fixStrokeT.addEventListener("mouseenter", handleMouseEnter);
-              fshadowT.addEventListener("mouseleave", handleMouseLeave);
-              fixStrokeT.addEventListener("click", handleClick);
+              eventManager.add(strokeNode, "change", handleStrokeChange, { signal: openRenderPanel.signal });
+              eventManager.add(fixStrokeT, "mouseenter", handleMouseEnter, { signal: openRenderPanel.signal });
+              eventManager.add(fshadowT, "mouseleave", handleMouseLeave, { signal: openRenderPanel.signal });
+              eventManager.add(fixStrokeT, "click", handleLazyloadClick, { signal: openRenderPanel.signal });
               return handleStrokeChange(), { fixStrokeT, fixShadowT, lazyloadT };
             } catch (e) {
               ERROR(`${e.name} in GetFixStrokeBool: %s (%s)`, e.message, def.array.exps.push(`[getFixStrokeBool]: ${e}`));
@@ -3021,17 +2990,18 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
             else if (CONST_VALUES[value]) !node.checked && node.click();
           }
 
-          function getFontShadow(shadowNode, shadowColorNode, submitButton, rangeShadowRoot) {
-            if (!shadowNode || !shadowColorNode || !rangeShadowRoot) return;
-            const renderCanvasT = qS(`#${def.id.renderCanvas}`, def.var.configIf);
+          function getFontShadow(shadowNode, shadowColorNode, submitButton) {
+            if (!shadowNode || !shadowColorNode) return;
+            const renderCanvasT = gIN(`#${def.id.renderCanvas}`, host);
             try {
-              const drawShadow = qS(`#${def.id.shadow}`, rangeShadowRoot);
+              const ranger = gIN(`#${def.id.fontShadow}>.${def.class.range}`, host);
+              const drawShadow = gIN(`#${def.id.shadow}`, ranger || null);
               const isShadowOFF = CONST_VALUES.fontShadow === 0;
               shadowNode.value = isShadowOFF ? "OFF" : CONST_VALUES.fontShadow.toFixed(2);
-              rangeSliderWidget(drawShadow, shadowNode, 2);
+              rangeSliderWidget(host, drawShadow, shadowNode, 2);
               checkInputValue(shadowNode, drawShadow, /^[0-8](\.[0-9]{1,2})?$/, 2);
               shadowColorNode.classList.toggle(`${def.const.seed}.disp:none`, isShadowOFF);
-              shadowNode.addEventListener("change", () => shadowColorNode.classList.toggle(`${def.const.seed}.disp:none`, isShadowOFF));
+              eventManager.add(shadowNode, "change", () => shadowColorNode.classList.toggle(`${def.const.seed}.disp:none`, isShadowOFF), { signal: openRenderPanel.signal });
               return drawShadow;
             } catch (e) {
               ERROR(`${e.name} in GetFontShadow: %s (%s)`, e.message, def.array.exps.push(`[getFontShadow]: ${e}`));
@@ -3041,16 +3011,17 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
             }
           }
 
-          function getColorAndColorPicker(cpNode, button, defaultColor, colorReg) {
+          function getColorAndColorPicker(cpNode, button, defaultColor, colorReg, name) {
             if (!cpNode || !button) return object();
+            const cpFn = { fromString: value => cpNode.style.setProperty("--fr-input-color", (cpNode.value = value.toUpperCase())) };
             try {
-              if (!global.FRColorPicker) return __console("warn", "FRColorPicker failed to load, inserted <INPUT> instead."), revokeColorPicker(cpNode, defaultColor, colorReg);
-              const colorPicker = new global.FRColorPicker(`#${def.id.color}`, def.var.configIf, { alpha: true, format: "hexa" });
-              const color = colorPicker.fromString(defaultColor) && (colorPicker.targetElement.value = parseColor(colorPicker.toHEXAString()));
-              colorPicker.onChange = () => (colorPicker.targetElement.value = parseColor(colorPicker.toHEXAString()));
-              return DEBUG(`frColorPicker: %c${color}`, getBrightnessAndSetColor(color)) ?? colorPicker;
+              if (!global[name]) return __console("warn", "FRColorPicker failed to load, inserted <INPUT> instead."), revokeColorPicker(cpNode, defaultColor, colorReg);
+              def.var.cp = new global[name](cpNode, def.map.shadow.get(host), { alpha: true, format: "hexa", signal: openRenderPanel.signal });
+              const color = def.var.cp.fromString(defaultColor) && (def.var.cp.targetElement.value = parseColor(def.var.cp.toString("hexa")));
+              def.var.cp.onChange = () => (def.var.cp.targetElement.value = parseColor(def.var.cp.toString("hexa")));
+              return DEBUG(`frColorPicker: %c${color}`, getBrightnessAndSetColor(color)), cpFn;
             } catch (e) {
-              return ERROR(`${e.name} in GetColorAndColorPicker:`, e.message) ?? { fromString: value => (cpNode.style.cssText = `--fr-input-color:${(cpNode.value = value)}`) };
+              return ERROR(`${e.name} in GetColorAndColorPicker:`, e.message), cpFn;
             } finally {
               saveChangeStatus(cpNode, defaultColor, button);
             }
@@ -3058,21 +3029,23 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
 
           function revokeColorPicker(cpNode, thisColor, colorReg) {
             cpNode.value = thisColor;
-            cpNode.style.cssText = `--fr-input-color:${thisColor}`;
-            cpNode.addEventListener("change", function () {
-              const color = this.value;
-              this.value = colorReg.test(color) ? parseColor(color) : thisColor;
-              this.style.cssText = `--fr-input-color:${colorReg.test(color) ? revertColor(color) : thisColor}`;
-            });
-            return safeObject.assign(object(), { fromString: value => (cpNode.style.cssText = `--fr-input-color:${(cpNode.value = value)}`) });
+            cpNode.style.setProperty("--fr-input-color", thisColor);
+            const setColorValue = () => {
+              const color = cpNode.value.toUpperCase();
+              cpNode.value = colorReg.test(color) ? parseColor(color) : thisColor;
+              cpNode.style.setProperty("--fr-input-color", colorReg.test(color) ? revertColor(color) : thisColor);
+            };
+            eventManager.add(cpNode, "change", setColorValue, { signal: openRenderPanel.signal });
+            return safeObject.assign(object(), { fromString: value => cpNode.style.setProperty("--fr-input-color", (cpNode.value = value.toUpperCase())) });
           }
 
           function doubleClickToEdit(fontCssNode) {
-            fontCssNode?.addEventListener("dblclick", event => {
+            const clickToEditEvent = event => {
               stopEventPropagation(event, { prevent: true });
               fontCssNode.classList.add(def.class.notreadonly);
               ["readonly", "title"].forEach(name => fontCssNode.removeAttribute(name));
-            });
+            };
+            eventManager.add(fontCssNode, "dblclick", clickToEditEvent, { signal: openRenderPanel.signal });
           }
 
           function dblClick(target) {
@@ -3080,7 +3053,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           }
 
           function customMonospceFont(customMonoNode) {
-            customMonoNode?.addEventListener("dblclick", async e => {
+            const customMonoNodeDblclickEvent = async e => {
               try {
                 stopEventPropagation(e, { prevent: true });
                 const [_config_data_, { monoSiteRules: siteRule, monoFontList: fontlist, monoFeature: feature }] = await Promise.all([getConfigureData(), getCustomMonoData()]);
@@ -3096,18 +3069,18 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                 </div>${customMonoTextareasHTML}`;
                 const [trueButtonText, neutralButtonText] = IS_CHN ? ["保存数据", "取 消"] : ["Save", "Cancel"];
                 const frDialog = new FrDialogBox({ trueButtonText, neutralButtonText, messageText, titleText });
-                const monospaceNodes = ["siterules", "font", "feature"].map(i => qS(`#${def.const.seed}\\.monospaced\\.${i}`, def.var.dialogIf));
-                const customMonoSwitch = qS(`#${def.id.iscusmono}`, def.var.dialogIf);
+                const monospaceNodes = ["siterules", "font", "feature"].map(i => qS(`#${def.const.seed}\\.monospaced\\.${i}`, frDialog.shadow));
+                const customMonoSwitch = qS(`#${def.id.iscusmono}`, frDialog.shadow);
                 const changeDisabledStatus = (listenerCheck, nodes, cssName) =>
                   nodes.forEach(node => (node.toggleAttribute("disabled", !listenerCheck), node.classList.toggle(cssName, !listenerCheck)));
                 changeDisabledStatus(customMonoSwitch.checked, monospaceNodes, def.class.readonly);
-                customMonoSwitch?.addEventListener("change", () => changeDisabledStatus(customMonoSwitch.checked, monospaceNodes, def.class.readonly));
+                eventManager.add(customMonoSwitch, "change", () => changeDisabledStatus(customMonoSwitch.checked, monospaceNodes, def.class.readonly), { signal: frDialog.signal });
                 let [custom_MonoSiteRules, custom_MonoFontList, custom_MonoFontFeature] = monospaceNodes.map(node => convertHtmlToText(node.value.trim()));
-                removeKeyboardEvent(...monospaceNodes);
+                removeKeyboardEvent({ signal: openRenderPanel.signal }, ...monospaceNodes);
                 const [monoSiteRulesNode, monoFontNode, monoFeatureNode] = monospaceNodes;
-                monoSiteRulesNode.addEventListener("change", () => (custom_MonoSiteRules = standardizeString(monoSiteRulesNode, false, true)));
-                monoFontNode.addEventListener("change", () => (custom_MonoFontList = standardizeString(monoFontNode, false, true, /'(?:ui-)?monospace',?/gi)));
-                monoFeatureNode.addEventListener("change", () => (custom_MonoFontFeature = standardizeString(monoFeatureNode, true, true, /[^\w",\- ]/g)));
+                eventManager.add(monoSiteRulesNode, "change", () => (custom_MonoSiteRules = standardizeString(monoSiteRulesNode, false, true)), { signal: frDialog.signal });
+                eventManager.add(monoFontNode, "change", () => (custom_MonoFontList = standardizeString(monoFontNode, false, true, /'(?:ui-)?monospace',?/gi)), { signal: frDialog.signal });
+                eventManager.add(monoFeatureNode, "change", () => (custom_MonoFontFeature = standardizeString(monoFeatureNode, true, true, /[^\w",\- ]/g)), { signal: frDialog.signal });
                 if (await frDialog.respond()) {
                   const monoSiteRulesArray = custom_MonoSiteRules.match(/@((?:[\w[\]\-.:]+\|?)+)##(?![^@]*##)[\w\-*.#:+>()~[\]=^$|,' ]+/g);
                   if (custom_MonoSiteRules && !monoSiteRulesArray) {
@@ -3116,7 +3089,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                       : `<p class="${def.const.seed}.clr:crimson">Custom Root/Selectors data error, Please refill!</p><p>Note: Previous content saved to the clipboard.</p>`;
                     const [trueButtonText, titleText] = IS_CHN ? ["确 定", "自定义根域及元素选择器数据错误"] : ["OK", "Custom Root/Selectors Data Error"];
                     const errorDialog = new FrDialogBox({ trueButtonText, messageText, titleText });
-                    if (await errorDialog.respond()) return copyToClipboard(custom_MonoSiteRules), dblClick(qS(`#${def.id.mono}`, def.var.configIf));
+                    if (await errorDialog.respond()) return copyToClipboard(custom_MonoSiteRules), dblClick(gIN(`#${def.id.mono}`, host));
                   }
                   const monoFontListArray = custom_MonoFontList.match(/'@?[^'\uFF00-\uFFEF\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF]+'/g);
                   if (custom_MonoFontList && !monoFontListArray) {
@@ -3125,7 +3098,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                       : `<p class="${def.const.seed}.clr:crimson">Custom Monospaced Font Data error, Please refill!</p><p>Note: Previous content saved to the clipboard.</p>`;
                     const [trueButtonText, titleText] = IS_CHN ? ["确 定", "自定义等宽字体数据错误"] : ["OK", "Custom Monospaced Font Data Error"];
                     const errorDialog = new FrDialogBox({ trueButtonText, messageText, titleText });
-                    if (await errorDialog.respond()) return copyToClipboard(custom_MonoFontList), dblClick(qS(`#${def.id.mono}`, def.var.configIf));
+                    if (await errorDialog.respond()) return copyToClipboard(custom_MonoFontList), dblClick(gIN(`#${def.id.mono}`, host));
                   }
                   const isSiteRules = !custom_MonoSiteRules || (safeArray.isArray(monoSiteRulesArray) && monoSiteRulesArray.length > 0);
                   const isFontList = !custom_MonoFontList || (safeArray.isArray(monoFontListArray) && monoFontListArray.length > 0);
@@ -3134,31 +3107,32 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                     !custom_MonoSiteRules ? GMdeleteValue(MONORULES) : saveData(MONORULES, uniq(monoSiteRulesArray));
                     !custom_MonoFontList ? GMdeleteValue(MONOFONTS) : saveData(MONOFONTS, monospaced_fontListString);
                     !custom_MonoFontFeature ? GMdeleteValue(MONOFEATS) : saveData(MONOFEATS, custom_MonoFontFeature);
-                    saveData(CONFIGURE, { ..._config_data_, isCustomMono: Boolean(qS(`#${def.id.iscusmono}`, def.var.dialogIf)?.checked) });
+                    saveData(CONFIGURE, { ..._config_data_, isCustomMono: Boolean(qS(`#${def.id.iscusmono}`, frDialog.shadow)?.checked) });
                     const messageText = IS_CHN
                       ? `<p class="${def.const.seed}.clr:green">您提交的自定义等宽字体数据已保存成功！</p><p>当前页面将在您确认后自动刷新。</p><p class="${def.const.seed}.clr:ff7f50 ${def.const.seed}.fs:12p">注：格式错误的输入内容已被自动过滤。</p>`
                       : `<p class="${def.const.seed}.clr:green">Custom Monospaced Data saved successfully!</p><p>The page will refresh after confirmation.</p><p class="${def.const.seed}.clr:ff7f50 ${def.const.seed}.fs:12p">Note: Incorrect content has been filtered.</p>`;
                     const [trueButtonText, titleText] = IS_CHN ? ["确 定", "自定义等宽字体数据保存"] : ["OK", "Custom Monospaced Data Save"];
                     const successDialog = new FrDialogBox({ trueButtonText, messageText, titleText });
-                    if (await successDialog.respond()) closeConfigurePage({ isReload: true });
+                    if (await successDialog.respond()) closeDialogAndPanel({ isReload: true, host });
                   }
                 }
               } catch (e) {
                 ERROR(`${e.name} in CustomMonospceFont:`, e.message);
               }
-            });
+            };
+            eventManager.add(customMonoNode, "dblclick", customMonoNodeDblclickEvent, { signal: openRenderPanel.signal });
           }
 
           function controlResetButton(resetT, fontSetFn, finalSettings, { drawScale, drawStrock, drawShadow }) {
             const { smoothT, ffaceT, fontScaleT, fixViewportT, strokeT, fixStrokeT, lazyloadT, fixShadowT, shadowsT, canvasT, colorPickerT, colorshowT, fontCssT, fontExT } = finalSettings;
-            resetT?.addEventListener("click", async () => {
+            const resetTClickEvent = async () => {
               const messageText = IS_CHN
                 ? `<p>『重置/恢复』将当前设置初始化为 <span class="${def.const.seed}.clr:708090">程序默认的初始数据</span> 或 <span class="${def.const.seed}.clr:708090">上次正确保存的数据</span>。一般是在您配置错误或需使用新功能参数的情况下才进行重置参数的操作。</p><p class="${def.const.seed}.clr:green">重置：重置当前数据为程序初始值，手动保存生效。</p><p class="${def.const.seed}.clr:8b0000">恢复：替换为上次正确保存的数据，自动恢复预览。</p><p class="${def.const.seed}.clr:808080">取消：放弃重置操作。</p>`
                 : `<p>『Reset/Restore』Initializes the current settings to <span class="${def.const.seed}.clr:708090">the program's default initial data</span> or <span class="${def.const.seed}.clr:708090">the last saved data</span>. The reset is usually done when configuration error or new feature is needed. </p><p class="${def.const.seed}.clr:green"><b>Reset:</b> Reset the current data to the initial value of the program, and save data manually.</p><p class="${def.const.seed}.clr:8b0000"><b>Restore:</b> Replace all with the last correctly saved data, and automatically restore preview. </p><p class="${def.const.seed}.clr:808080"><b>Cancel:</b> Abort the reset operation. </p>`;
               const [trueButtonText, falseButtonText] = IS_CHN ? ["重 置", "恢 复"] : ["Reset", "Restore"];
               const [neutralButtonText, titleText] = IS_CHN ? ["取 消", "参数重置确认"] : ["Cancel", "Confirm To Reset Settings"];
               const frDialog = new FrDialogBox({ trueButtonText, falseButtonText, neutralButtonText, messageText, titleText });
-              const shadowColorNode = qS(`#${def.id.shadowColor}`, def.var.configIf);
+              const shadowColorNode = gIN(`#${def.id.shadowColor}`, host);
               if (await frDialog.respond()) {
                 smoothT.checked !== INITIAL_VALUES.fontSmooth ? smoothT.click() : DEBUG("<fontSmooth> NOT MODIFIED");
                 ffaceT.checked !== INITIAL_VALUES.fontFace ? ffaceT.click() : DEBUG("<fontFace> NOT MODIFIED");
@@ -3168,7 +3142,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                   setSliderProperty(drawScale, (def.var.curScale = INITIAL_VALUES.fontSize), 3);
                   if (isFixViewport) {
                     fontScaleT.value !== "OFF" && fixViewportT.checked !== INITIAL_VALUES.fixViewport ? fixViewportT.click() : DEBUG("<fixViewport> NOT MODIFIED");
-                    qS(`#${def.id.fviewport}`, def.var.configIf)?.classList.toggle(`${def.const.seed}.vis:hidden`, fontScaleT.value === "OFF");
+                    gIN(`#${def.id.fviewport}`, host)?.classList.toggle(`${def.const.seed}.vis:hidden`, fontScaleT.value === "OFF");
                   }
                 }
                 setValueAndEvent(strokeT, INITIAL_VALUES.fontStroke === 0 ? "OFF" : INITIAL_VALUES.fontStroke.toFixed(3), "change");
@@ -3176,7 +3150,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                 if (IS_CAUSED_BOLDSTROKEERROR) {
                   fixStrokeT.checked !== (def.var.fixStroke = INITIAL_VALUES.fixStroke) ? fixStrokeT.click() : DEBUG("<fixStroke> NOT MODIFIED");
                   lazyloadT.checked !== INITIAL_VALUES.lazyload ? lazyloadT.click() : DEBUG("<lazyload> NOT MODIFIED");
-                  qS(`#${def.id.fstroke}`, def.var.configIf)?.classList.toggle(`${def.const.seed}.vis:hidden`, strokeT.value === "OFF");
+                  gIN(`#${def.id.fstroke}`, host)?.classList.toggle(`${def.const.seed}.vis:hidden`, strokeT.value === "OFF");
                 }
                 setValueAndEvent(shadowsT, INITIAL_VALUES.fontShadow === 0 ? "OFF" : INITIAL_VALUES.fontShadow.toFixed(2), "change");
                 setSliderProperty(drawShadow, INITIAL_VALUES.fontShadow, 2);
@@ -3187,19 +3161,18 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                 setValueAndEvent(fontCssT, INITIAL_VALUES.fontCSS, "input");
                 setValueAndEvent(fontExT, INITIAL_VALUES.fontEx, "input");
                 sleep(220)(getCurrentFontName(ffaceT.checked, INITIAL_VALUES.fontSelect.replace(/'/g, "")))
-                  .then(inputPlaceholder)
-                  .then(() => qS(`#${def.id.submit} .${def.class.submit}[v-Preview="true"]`, def.var.configIf)?.click());
+                  .then(r => inputPlaceholder(host, r))
+                  .then(() => gIN(`#${def.id.submit} .${def.class.submit}[v-Preview="true"]`, host)?.click());
               } else {
                 smoothT.checked !== CONST_VALUES.fontSmooth ? smoothT.click() : DEBUG("<fontSmooth> NOT MODIFIED");
                 ffaceT.checked !== CONST_VALUES.fontFace ? ffaceT.click() : DEBUG("<fontFace> NOT MODIFIED");
                 fontSetFn?.fdeleteList();
                 if (isFontsize) {
                   setValueAndEvent(fontScaleT, CONST_VALUES.fontSize === 1 ? "OFF" : CONST_VALUES.fontSize.toFixed(3), "change");
-                  setSliderProperty(drawScale, CONST_VALUES.fontSize, 3);
-                  def.array.scaleMatrix.push((def.var.curScale = CONST_VALUES.fontSize));
+                  setSliderProperty(drawScale, updateScaleValueMatrix(CONST_VALUES.fontSize), 3);
                   if (isFixViewport) {
                     fixViewportT.checked !== CONST_VALUES.fixViewport ? fixViewportT.click() : DEBUG("<fixViewport> NOT MODIFIED");
-                    qS(`#${def.id.fviewport}`, def.var.configIf)?.classList.toggle(`${def.const.seed}.vis:hidden`, fontScaleT.value === "OFF");
+                    gIN(`#${def.id.fviewport}`, host)?.classList.toggle(`${def.const.seed}.vis:hidden`, fontScaleT.value === "OFF");
                   }
                 }
                 setValueAndEvent(strokeT, CONST_VALUES.fontStroke === 0 ? "OFF" : CONST_VALUES.fontStroke.toFixed(3), "change");
@@ -3207,7 +3180,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                 if (IS_CAUSED_BOLDSTROKEERROR) {
                   fixStrokeT.checked !== (def.var.fixStroke = CONST_VALUES.o.fixStroke) ? fixStrokeT.click() : DEBUG("<fixStroke> NOT MODIFIED");
                   lazyloadT.checked !== CONST_VALUES.lazyload ? lazyloadT.click() : DEBUG("<lazyload> NOT MODIFIED");
-                  qS(`#${def.id.fstroke}`, def.var.configIf)?.classList.toggle(`${def.const.seed}.vis:hidden`, strokeT.value === "OFF");
+                  gIN(`#${def.id.fstroke}`, host)?.classList.toggle(`${def.const.seed}.vis:hidden`, strokeT.value === "OFF");
                 }
                 setValueAndEvent(shadowsT, CONST_VALUES.fontShadow === 0 ? "OFF" : CONST_VALUES.fontShadow.toFixed(2), "change");
                 setSliderProperty(drawShadow, CONST_VALUES.fontShadow, 2);
@@ -3217,16 +3190,17 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                 setValueAndEvent(colorshowT, CONST_VALUES.shadowColor, "change", colorPickerT);
                 setValueAndEvent(fontCssT, CONST_VALUES.fontCSS, "input");
                 setValueAndEvent(fontExT, CONST_VALUES.fontEx, "input");
-                getCurrentFontName(ffaceT.checked, selectedFont).then(inputPlaceholder);
+                getCurrentFontName(ffaceT.checked, selectedFont).then(r => inputPlaceholder(host, r));
                 loadPreview(def.var.preview, (def.var.topStyle = tStyle));
                 delete def.var.preview && correctBoldPassive("recover", boldFixCSSText, document, true);
               }
-            });
+            };
+            eventManager.add(resetT, "click", resetTClickEvent, { signal: openRenderPanel.signal });
           }
 
           function controlSubmitButton(submitT, fontSetFn, finalSettings) {
             const { ffaceT, smoothT, fontScaleT, fixViewportT, strokeT, fixStrokeT, lazyloadT, shadowsT, fixShadowT, canvasT, colorshowT, colorReg, fontCssT, fontExT } = finalSettings;
-            submitT?.addEventListener("click", async function () {
+            const submitTClickEvent = async function () {
               const fontlists = fontSetFn?.fsearchList(def.id.fontName) ?? [];
               const fontselect = fontlists.length > 0 ? addSingleQuoteForItem(fontlists) : CONST_VALUES.fontSelect;
               const [fontface, smooth] = [ffaceT.checked, smoothT.checked];
@@ -3266,7 +3240,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                   const _rootpseudoclass = `:root{--fr-font-basefont:${INITIAL_REMARKS.fontBase};--fr-font-emoji:${INITIAL_REMARKS.fontEmoji};${customFontFeature}--fr-font-fontscale:${fscale};--fr-font-family:${fontselect};--fr-font-shadow:${_shadowcsstext};--fr-font-stroke:${_strokecsstext};--fr-no-stroke:0px transparent;--fr-fix-stroke:var(--fr-no-stroke);--fr-fix-shadow:none;--fr-render-text:optimizeLegibility;${_sharpRender}--fr-render-image:auto;${monoFontText}${monoFallback}${monoShadowColor}${monoShadow}${monoFeatureText}}`;
                   const __tFontStyle = _IS_EMPTY_CONFIG ? `` : `${_rootpseudoclass}${_firefoxInputFix}${_tFontStyle}`;
                   restoreSaveButton({ button: this, isRestore: false });
-                  getCurrentFontName(fontface, _selectedFont).then(inputPlaceholder);
+                  getCurrentFontName(fontface, _selectedFont).then(r => inputPlaceholder(host, r));
                   loadPreview(isPreview, (def.var.topStyle = __tFontStyle), false) ?? DEBUG(`frColorPicker<Preview>: %c${parseColor(fscolor)}`, getBrightnessAndSetColor(fscolor));
                   correctBoldPassive("preview", _fixfontstroke, document, true);
                 } catch (e) {
@@ -3286,25 +3260,26 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                   } catch (_) {
                     domainValues = [];
                   }
-                  const awdlNode = qS(`#${def.const.seed}\\.sitedatalist`, def.var.dialogIf);
+                  const awdlNode = qS(`#${def.const.seed}\\.sitedatalist`, frDialog.shadow);
                   awdlNode?.classList.add(domainValues.length > 0 ? `${def.const.seed}.disp:inline.block` : `${def.const.seed}.disp:none`);
-                  awdlNode?.addEventListener("click", () => void manageDomainsList());
+                  eventManager.add(awdlNode, "click", manageDomainsList, { signal: frDialog.signal });
                   const domainValueIndex = updateDomainsIndex(domainValues);
-                  const cwdNode = qS(`#${def.const.seed}\\.save\\.sitedata`, def.var.dialogIf);
+                  const cwdNode = qS(`#${def.const.seed}\\.save\\.sitedata`, frDialog.shadow);
                   if (~domainValueIndex && cwdNode) {
                     const fontDate = setDateFormat("yyyy-MM-dd HH:mm:ss", new Date(domainValues[domainValueIndex].fontDate));
                     const cwdNodeHTML = IS_CHN
                       ? `<p class="${def.const.seed}.save:p"><span class="${def.const.seed}.clr:indigo"><strong>上次保存：</strong>${fontDate} </span><button id="${def.const.seed}.del.sitedata" title="删除数据后将刷新页面">删除当前网站数据</button></p>`
                       : `<p class="${def.const.seed}.save:p"><span class="${def.const.seed}.clr:indigo"><strong>The last saved</strong>: ${fontDate} </span><button id="${def.const.seed}.del.sitedata" title="The page will be refreshed after deleting the data">Delete Data</button></p>`;
                     cwdNode.innerHTML = tTP.createHTML(cwdNodeHTML);
-                    qS(`#${def.const.seed}\\.del\\.sitedata`, def.var.dialogIf)?.addEventListener("click", async () => {
+                    const deleteCurrentClickEvent = async () => {
                       if (~domainValueIndex) domainValues.splice(domainValueIndex, 1);
                       saveData(DOMAINFONTSET, domainValues);
                       const messageText = IS_CHN ? `当前网站个性化数据已成功删除，页面即将刷新。` : `The current site data was deleted, refresh now!`;
                       const [trueButtonText, titleText] = IS_CHN ? ["感谢使用", "个性化数据删除"] : ["Thanks", "Customized Data Deletion"];
                       const successDialog = new FrDialogBox({ trueButtonText, messageText: `<p class="${def.const.seed}.clr:8b0000">${messageText}</p>`, titleText });
-                      if (await successDialog.respond()) closeConfigurePage({ isReload: true });
-                    });
+                      if (await successDialog.respond()) closeDialogAndPanel({ isReload: true, host });
+                    };
+                    eventManager.add(qS(`#${def.const.seed}\\.del\\.sitedata`, frDialog.shadow), "click", deleteCurrentClickEvent, { signal: frDialog.signal });
                   }
                   const receivedRenderData = {
                     fontSelect: convertHtmlToText(fontselect),
@@ -3354,15 +3329,16 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                 const messageText = IS_CHN ? `您设置的字体渲染数据已成功保存,页面即将刷新！` : `The font rendering data was saved, refresh now!`;
                 const [trueButtonText, titleText] = IS_CHN ? ["感谢使用", "字体渲染数据保存"] : ["Thanks", "Font Rendering Data Save"];
                 const successDialog = new FrDialogBox({ trueButtonText, messageText: `<p class="${def.const.seed}.clr:green">${messageText}</p>`, titleText });
-                if (await successDialog.respond()) closeConfigurePage({ isReload: delete def.var.successed });
+                if (await successDialog.respond()) closeDialogAndPanel({ isReload: delete def.var.successed, host });
               }
-            });
+            };
+            eventManager.add(submitT, "click", submitTClickEvent, { signal: openRenderPanel.signal });
           }
 
           function controlBackupButton(backupT, needBackup) {
             if (!needBackup || !backupT) return;
             backupT.classList.add(`${def.const.seed}.disp:inline.block`);
-            backupT.addEventListener("click", async () => {
+            const backupTClickEvent = async () => {
               try {
                 const messageText = IS_CHN
                   ? `<p class="${def.const.seed}.clr:green ${def.const.seed}.fw:700">备份到本地文件：</p><p>备份到本地，自动下载 backup.*.sqlitedb 文件。</p><p class="${def.const.seed}.clr:8b0000 ${def.const.seed}.fw:700">从本地文件还原：</p><p><span class="${def.const.seed}.clr:indigo ${def.const.seed}.cs:pointer" id="${def.id.tfiles}">\ud83d\udd0e [点击这里载入*.sqlitedb备份文件]</span><input accept=".sqlitedb" type="file" id="${def.id.files}"/></p>`
@@ -3370,22 +3346,23 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                 const [trueButtonText, falseButtonText] = IS_CHN ? ["备 份", "还 原"] : ["Backup", "Restore"];
                 const [neutralButtonText, titleText] = IS_CHN ? ["取 消", "备份与还原数据"] : ["Cancel", "Backup and Restore Data"];
                 const frDialog = new FrDialogBox({ trueButtonText, falseButtonText, neutralButtonText, messageText, titleText });
-                const [messageNode, inputNode] = [def.id.tfiles, def.id.files].map(id => qS(`#${id}`, def.var.dialogIf));
+                const [messageNode, inputNode] = [def.id.tfiles, def.id.files].map(id => qS(`#${id}`, frDialog.shadow));
                 if (messageNode && inputNode) {
-                  messageNode.addEventListener("click", () => void inputNode.click());
-                  inputNode.addEventListener("change", () => {
+                  eventManager.add(messageNode, "click", () => inputNode.click(), { signal: frDialog.signal });
+                  const fileSelectChangeEvent = () => {
                     const messageNodeHTML = inputNode.files[0]
                       ? `<em class="${def.const.seed}.clr:indigo ${def.const.seed}.fs:11p ${def.const.seed}.wrap.break">${inputNode.files[0].name}</em><br/>` +
-                        `<span class="${def.const.seed}.clr:crimson"> \ud83d\udd0e [${IS_CHN ? "重新选择" : "Reselect"}]</span>`
+                      `<span class="${def.const.seed}.clr:crimson"> \ud83d\udd0e [${IS_CHN ? "重新选择" : "Reselect"}]</span>`
                       : `\ud83d\udd0e [${IS_CHN ? "点击这里载入*.sqlitedb备份文件" : "Click here to load *.sqlitedb backup file"}]`;
                     messageNode.innerHTML = tTP.createHTML(messageNodeHTML);
-                  });
+                  };
+                  eventManager.add(inputNode, "change", fileSelectChangeEvent, { signal: frDialog.signal });
                 }
                 if (await frDialog.respond()) {
                   const allkey = [FONTSET, EXCLUDESITES, DOMAINFONTSET, CUSTOMFONTS, MONOFONTS, MONORULES, MONOFEATS, FONTSCALE, FONTOVERRIDE, CONFIGURE];
                   const backendData = await Promise.all(allkey.map(key => GMgetValue(key)));
                   const [fontSets, excludeSites, domainFontSets, customFonts, monoFonts, monoRules, monoFeature, fontScaleDef, fontOverrideDef, configure] = backendData;
-                  const db_$R = inspectLicense()?.keycode?.().concat(encrypt(def.var.scriptName));
+                  const db_$R = inspectLicense(SOURCE)?.keycode?.().concat(encrypt(def.var.scriptName));
                   const db_$3 = domainFontSets || encrypt(JSON.stringify([]));
                   const db_$4 = customFonts || encrypt(JSON.stringify([]));
                   const db = { db_R: db_$R, db_0: encrypt(new Date()), db_1: fontSets, db_2: excludeSites, db_3: db_$3, db_4: db_$4, db_5: configure };
@@ -3396,7 +3373,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                   messageText += `</p><p class="${def.const.seed}.clr:8b0000 ${def.const.seed}.fst:ita ${def.const.seed}.fs:12p ${def.const.seed}.wrap.break">${fileName}`;
                   const [trueButtonText, titleText] = IS_CHN ? ["确 定", "数据备份"] : ["OK", "Data Backup"];
                   const downloadDialog = new FrDialogBox({ trueButtonText, messageText: `<p class="${def.const.seed}.clr:green">${messageText}</p>`, titleText });
-                  if (await downloadDialog.respond()) DEBUG(`Backup succeeded: ${fileName}`) ?? closeConfigurePage();
+                  if (await downloadDialog.respond()) DEBUG(`Backup succeeded: ${fileName}`) ?? closeDialogAndPanel({ host });
                 } else {
                   try {
                     const thatFile = inputNode.files[0];
@@ -3404,6 +3381,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                     const reader = new FileReader();
                     const FileReaderFn = async function () {
                       try {
+                        eventManager.remove(reader, "load", FileReaderFn, false);
                         const fileContent = decrypt(String(this.result));
                         const parsedData = JSON.parse(cipherInstance.decrypt(fileContent));
                         const decryptedData = object();
@@ -3413,9 +3391,9 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                         }
                         decryptedData.db_R = decrypt(parsedData.db_R);
                         decryptedData.db_0 = decrypt(parsedData.db_0);
-                        if (!isNaN(Date.parse(decryptedData.db_0)) && new Date(decryptedData.db_0) < new Date() && inspectLicense()?.inspect?.(decryptedData.db_R)) {
+                        if (!isNaN(Date.parse(decryptedData.db_0)) && new Date(decryptedData.db_0) < new Date() && inspectLicense(SOURCE)?.inspect?.(decryptedData.db_R)) {
                           const keys = await GMlistValues();
-                          keys.forEach(key => void GMdeleteValue(key));
+                          keys.forEach(key => GMdeleteValue(key));
                           saveData(FONTSET, decryptedData.db_1);
                           saveData(EXCLUDESITES, decryptedData.db_2);
                           saveData(DOMAINFONTSET, decryptedData.db_3);
@@ -3432,7 +3410,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                           const [trueButtonText, titleText] = IS_CHN ? ["确 定", "数据还原完毕"] : ["OK", "Data restoration complete"];
                           const backupDialog = new FrDialogBox({ trueButtonText, messageText, titleText });
                           backupDialog.trueButton.className = backupDialog.trueButton.setAttribute("disabled", "") ?? `${def.class.dbb} ${def.class.dbbn}`;
-                          const msgNode = qS(`#${def.const.seed}\\.pull\\.result`, def.var.dialogIf);
+                          const msgNode = qS(`#${def.const.seed}\\.pull\\.result`, backupDialog.shadow);
                           msgNode && (await asyncGetRules(msgNode, backupDialog));
                         } else throw new Error("Invalid Data Error");
                       } catch (e) {
@@ -3440,23 +3418,24 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                         const messageText = IS_CHN ? `数据校验错误，请选择正确的本地备份文件！` : `Data validation error, please check the file!`;
                         const [trueButtonText, titleText] = IS_CHN ? ["确 定", "数据文件错误"] : ["OK", "Data File Error"];
                         const errorDialog = new FrDialogBox({ trueButtonText, messageText: `<p class="${def.const.seed}.clr:8b0000">${messageText}</p>`, titleText });
-                        if (await errorDialog.respond()) qS(`#${def.id.backup}`, def.var.configIf)?.click();
+                        if (await errorDialog.respond()) gIN(`#${def.id.backup}`, host)?.click();
                       }
                     };
-                    reader.addEventListener("load", FileReaderFn, false);
+                    eventManager.add(reader, "load", FileReaderFn, false);
                     reader.readAsText(thatFile);
                   } catch (e) {
                     ERROR(`${e.name} in FileReader.load: Backup file not exist!`);
                     const messageText = IS_CHN ? `载入文件不存在，请选择要还原的备份文件！` : `Load file not exist, please select one to restore!`;
                     const [trueButtonText, titleText] = IS_CHN ? ["确 定", "没有文件载入"] : ["OK", "No File Loading"];
                     const nothingDialog = new FrDialogBox({ trueButtonText, messageText: `<p class="${def.const.seed}.clr:indigo">${messageText}</p>`, titleText });
-                    if (await nothingDialog.respond()) qS(`#${def.id.backup}`, def.var.configIf)?.click();
+                    if (await nothingDialog.respond()) gIN(`#${def.id.backup}`, host)?.click();
                   }
                 }
               } catch (e) {
                 ERROR(`${e.name} in ControlBackupButton:`, e.message);
               }
-            });
+            };
+            eventManager.add(backupT, "click", backupTClickEvent, { signal: openRenderPanel.signal });
           }
         }
 
@@ -3468,8 +3447,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
             if (!checkFont.detect(font.en) && !((font.en = convertToUnicode(font.ch)) && checkFont.detect(font.en))) continue;
             delete font.ps && fontAvailable.push({ ...font, sort: index + 1 });
           }
-          checkFont.destroy();
-          return fontAvailable.sort((a, b) => a.sort - b.sort);
+          return checkFont.destroy(), fontAvailable.sort((a, b) => a.sort - b.sort);
         }
 
         async function getCurrentFontName(fontFaceCheck, fontName) {
@@ -3485,53 +3463,57 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           return curFont;
         }
 
-        function inputPlaceholder(currentFont, input, current = IS_CHN ? "当前字体：" : "Current: ") {
-          if (!(input = qS(`#${def.id.fontList} .${def.class.selectFontID} input`, def.var.configIf))) return;
+        function inputPlaceholder(host, currentFont, input, current = IS_CHN ? "当前字体：" : "Current: ") {
+          if (!(input = gIN(`#${def.id.fontList} .${def.class.selectFontID} input`, host))) return;
           (input.dataset.currentFont = currentFont) && input.setAttribute("placeholder", `${current}${currentFont}`);
-          safeAddEventListener(input, "mouseenter", e => e.target.setAttribute("placeholder", IS_CHN ? "输入关键字可检索字体" : "Enter some keywords"));
-          safeAddEventListener(input, "mouseleave", e => e.target.setAttribute("placeholder", `${current}${e.target.dataset.currentFont}`));
+          eventManager.add(input, "mouseenter", e => e.target.setAttribute("placeholder", IS_CHN ? "输入关键字可检索字体" : "Enter some keywords"), { signal: openRenderPanel.signal });
+          eventManager.add(input, "mouseleave", e => e.target.setAttribute("placeholder", `${current}${e.target.dataset.currentFont}`), { signal: openRenderPanel.signal });
         }
 
-        function closeConfigurePage({ isReload } = {}) {
-          FrDialogBox.closure() && qS(`#${def.id.container}`, def.var.configIf)?.classList.remove(`${def.const.seed}.opac:1`);
-          sleep(5e2)(safeRemoveNode("fr-colorpicker") && safeRemoveNode("fr-configure")).then(r => r && closeDialogModel(qS(`dialog#${def.const.dialog}`)));
-          def.array.values.clear() || isReload ? reload() : isPreview && restoreSavedPreview();
+        function closeDialogAndPanel({ isReload, host } = {}) {
+          FrDialogBox.closure() ?? def.count.panel?.abort("closeDialogAndPanel") ?? def.var.cp?.destroy() ?? (def.var.cp = null);
+          sleep(5e2)(gIN(`#${def.id.container}`, host || qS("fr-configure"))?.classList.remove(`${def.const.seed}.opac:1`))
+            .then(() => safeRemoveNode("fr-colorpicker") && safeRemoveNode("fr-configure") && closeDialogModel())
+            .then(() => def.array.values.clear(), isReload ? reload() : isPreview && restoreSavedPreview());
         }
 
-        function rangeSliderWidget(listener, target, bits, isOne = false) {
+        function rangeSliderWidget(host, listener, target, bits, isOne = false) {
           if (!listener || !target) return;
-          listener.addEventListener("input", () => {
+          const listenerInputEvent = () => {
             const [value, isOFF] = [Number(listener.value), Number(listener.value) === Number(isOne)];
             const toggleClass = (node, name) => node?.classList.toggle(`${def.const.seed}.${name}`, isOFF);
             setSliderProperty(listener, value, bits);
             setValueAndEvent(target, isOFF ? "OFF" : value.toFixed(bits), "change");
             switch (listener.id) {
               case def.id.shadow:
-                return toggleClass(qS(`#${def.id.shadowColor}`, def.var.configIf), "disp:none");
+                return toggleClass(gIN(`#${def.id.shadowColor}`, host), "disp:none");
               case def.id.scale:
-                return isFixViewport && toggleClass(qS(`#${def.id.fviewport}`, def.var.configIf), "vis:hidden");
+                return isFixViewport && toggleClass(gIN(`#${def.id.fviewport}`, host), "vis:hidden");
               case def.id.stroke:
-                return IS_REAL_BLINK && toggleClass(qS(`#${def.id.fstroke}`, def.var.configIf), "vis:hidden");
+                return IS_REAL_BLINK && toggleClass(gIN(`#${def.id.fstroke}`, host), "vis:hidden");
             }
-          });
+          };
+          eventManager.add(listener, "input", listenerInputEvent, { signal: openRenderPanel.signal });
         }
 
         function expandOrCollapse(button, textarea, node) {
           if (!button || !textarea || !node) return;
-          button.addEventListener("click", () => {
+          const switchButtonClickEvent = () => {
             const isOn = button.getAttribute("fr-button-switch") === "ON";
             textarea.classList.toggle(`${def.const.seed}.disp:none`, isOn);
             button.textContent = isOn ? "\u2228" : "\u2227";
             node.classList.toggle(`${def.const.seed}.h:35p.mh:35p`, isOn);
             button.setAttribute("fr-button-switch", isOn ? "OFF" : "ON");
-          });
+          };
+          eventManager.add(button, "click", switchButtonClickEvent, { signal: openRenderPanel.signal });
         }
 
         function saveChangeStatus(input, initVal, button, isOne = false) {
           if (!input || !button) return;
           const deBounceSetEffect = createDeBounce({ fn: setEffectIntoSubmit, delay: 2e2 });
           const method = ["textarea", "hidden"].includes(input.type) ? "input" : "change";
-          input.addEventListener(method, () => deBounceSetEffect(input.type === "checkbox" ? input.checked : input.value, initVal, input, button, isOne, isPreview));
+          const changeStatusEvent = () => deBounceSetEffect(input.type === "checkbox" ? input.checked : input.value, initVal, input, button, isOne, isPreview);
+          eventManager.add(input, method, changeStatusEvent, { signal: openRenderPanel.signal });
         }
 
         function setEffectIntoSubmit(newVal, initVal, input, button, isOne, isPrev) {
@@ -3548,7 +3530,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
         }
 
         function restoreSavedPreview() {
-          def.array.scaleMatrix.push((def.var.curScale = CONST_VALUES.fontSize)) && (def.var.fixStroke = CONST_VALUES.o.fixStroke);
+          updateScaleValueMatrix(CONST_VALUES.fontSize) && (def.var.fixStroke = CONST_VALUES.o.fixStroke);
           if (def.var.preview) correctBoldPassive("recover", boldFixCSSText, document, true);
           loadPreview(def.var.preview, (def.var.topStyle = tStyle)) || delete def.var.preview;
         }
@@ -3574,7 +3556,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
         }
 
         function convertFullToHalf(str) {
-          return arrayFrom(str).reduce((result, char) => {
+          return [...str].reduce((result, char) => {
             const charCode = char.charCodeAt(0);
             if (charCode === 12288) return result + String.fromCharCode(charCode - 12256);
             else if (charCode >= 65281 && charCode <= 65374) return result + String.fromCharCode(charCode - 65248);
@@ -3582,9 +3564,9 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           }, "");
         }
 
-        function reportErrorToAuthor(exps) {
+        function reportScriptErrors(exps) {
           if (!safeArray.isArray(exps) || exps.length === 0) return;
-          sleep(6e2)(closeConfigurePage()).then(async () => {
+          sleep(6e2)(closeDialogAndPanel()).then(async () => {
             if (qS("fr-dialogbox[fr-error]")) return;
             const errorList = exps.map((exp, i) => `${i + 1}. ${exp}`).join("<br/>");
             const errorNoticeHTML = IS_CHN
@@ -3604,18 +3586,20 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
             try {
               const frDialog = new FrDialogBox({ trueButtonText, falseButtonText, messageText, titleText });
               frDialog.container.setAttribute("fr-error", !(def.array.exps.length = 0));
-              const errorText = qS(`#${def.const.seed}\\.report\\:author`, def.var.dialogIf)?.textContent.trim() ?? "";
+              const errorText = qS(`#${def.const.seed}\\.report\\:author`, frDialog.shadow)?.textContent.trim() ?? "";
               const copyText = errorText.replace(/(\u3000)|(\u0020+)|((?:\r?\n)+)/g, (_, p1, p2) => (p1 ? "\n" : p2 ? "\u0020" : "\n"));
               if (await frDialog.respond()) return copyToClipboard("```log\n" + copyText + "\n```"), GMopenInTab(`${def.url.feedback}/new?template=bug_report.yaml`, false);
               reload();
             } catch (e) {
-              ERROR(`${e.name} in ReportErrorToAuthor:`, e.message);
+              ERROR(`${e.name} in ReportScriptErrors:`, e.message);
             }
           });
         }
 
         /* FIX_CANVAS_FONT_RENDERING. NEW UPDATE: 2024-09-11 F9Y4NG */
 
+        const originFillText = CanvasRenderingContext2D.prototype.fillText;
+        const originStrokeText = CanvasRenderingContext2D.prototype.strokeText;
         function overrideCanvasFont(renderFont) {
           if (!NOT_IN_EXCLUSION_LIST || !CONST_VALUES.o.renderCanvas || !CONST_VALUES.o.fontFace) return;
           const fontRegexp = /^((?:[a-z-]+\s)+|[0-9]+\s)?(\d*\.?\d+(?:px|em|pt|%|rem)\s)?(.+)$/i;
@@ -3625,16 +3609,16 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
             return matches ? `${matches[1] ?? ""} ${matches[2] ?? ""} ${fontName}`.trim() : fontText;
           };
           const overrideMethod = methodName =>
-            (CanvasRenderingContext2D.prototype[methodName] = function (...args) {
-              if (!this.frFontFace && this.font && !this.font.includes(renderFont)) {
-                this.font = modifyFont(this.font);
-                if (methodName === "fillText" && shadow_r > 0 && !/(?:bold|[6789]00)\s/i.test(this.font)) {
-                  def.const.fillText.apply(this, args);
-                  safeObject.assign(this, { shadowColor: parseColor(shadow_c), shadowBlur: shadow_r, shadowOffsetX: 0, shadowOffsetY: 0 });
-                }
+          (CanvasRenderingContext2D.prototype[methodName] = function (...args) {
+            if (!this.frFontFace && this.font && !this.font.includes(renderFont)) {
+              this.font = modifyFont(this.font);
+              if (methodName === "fillText" && shadow_r > 0 && !/(?:bold|[6789]00)\s/i.test(this.font)) {
+                originFillText.apply(this, args);
+                safeObject.assign(this, { shadowColor: parseColor(shadow_c), shadowBlur: shadow_r, shadowOffsetX: 0, shadowOffsetY: 0 });
               }
-              def.const[methodName].apply(this, args);
-            });
+            }
+            (methodName === "fillText" ? originFillText : originStrokeText).apply(this, args);
+          });
           ["fillText", "strokeText"].forEach(overrideMethod);
         }
 
@@ -3642,21 +3626,23 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
 
         const selectors = "audio,base,br,canvas,defs,embed,g,head,hr,iframe,img,link,math,meta,noscript,object,path,picture,script,style,svg,title,video";
         const [queryString, threads, WATERMARK] = [`:not(${selectors},[class*="watermark" i])`, Math.min(navigator.hardwareConcurrency || 4, 16), /watermark/i];
-        const [boldStatusCache, classNameCache, transitionCache, mutationNodeSet, observeNodeSet] = [new WeakMap(), new WeakMap(), new WeakMap(), new Set(), new Set()];
         const [localFlag, sessionFlag] = [localStorage, sessionStorage].map(storage => Boolean(storage?.getItem(def.static.conflict)));
         const [_Config, _ExcludeTagSet] = [{ attributeOldValue: true, childList: true, subtree: true }, new Set(selectors.split(","))];
         const [changeAttribute, deBounceFixPassive] = [createChangeAttribute(def.const.boldAttrName, !localFlag), createDeBounce({ fn: correctBoldPassive, delay: 50 })];
         const checkConflict = { flag: localFlag, counter: new LRUCache(50), threshold: Math.min(threads * 15, 2e2), interval: 1e2 };
         const hasPermission = () => IS_CAUSED_BOLDSTROKEERROR && def.var.fixStroke && !sessionStorage?.getItem(def.static.conflict);
-        const applyLazyLoad = (fn, ...parameter) => void (CONST_VALUES.o.lazyload ? GMunsafeWindow[def.const.raf](fn.bind(null, ...parameter)) : fn(...parameter));
-        const getClassName = (el, tmp) => (classNameCache.has(el) ? classNameCache.get(el) : classNameCache.set(el, (tmp = toString(el.className))) && tmp);
+        const applyLazyLoad = (fn, ...parameter) => (CONST_VALUES.o.lazyload ? GMunsafeWindow[def.const.raf](fn.bind(null, ...parameter)) : fn(...parameter));
+        const getClassName = (el, tmp) => (def.map.class.has(el) ? def.map.class.get(el) : def.map.class.set(el, (tmp = toString(el.className))) && tmp);
+        const computStyle = (function (emptyStyle) {
+          return (node, opt = null) => (node?.nodeType !== 1 ? emptyStyle : (node.ownerDocument?.defaultView || global).getComputedStyle(node, opt));
+        })(new Proxy(object(), { get: () => NaN }));
 
         function correctBoldPassive(event, cssText, target = document, recheck = false) {
           try {
             let { elementSet, shadowSet } = qAS(queryString, target);
             for (const shadow of shadowSet) processShadowRootNode(shadow, cssText, def.var.boldObserver);
             if (shadowSet.clear() || elementSet.size === 0 || !hasPermission()) return;
-            handleBoldStyles({ pendingNodeSet: elementSet, recheck }) ?? DEBUG(`CorrectBold.Passive${IN_FRAMES}:`, { eventType: event ?? "unknown" });
+            handleBoldStyles({ pendingNodeSet: elementSet, recheck }) ?? DEBUG(`Correct.Bold.Passive${IN_FRAMES}:`, { eventType: event ?? "unknown" });
           } catch (e) {
             ERROR(`${e.name} in CorrectBoldPassive:`, e);
           }
@@ -3664,7 +3650,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
 
         function processShadowRootNode(shadow, cssText, observer) {
           NOT_IN_EXCLUSION_LIST && shadowRootNodeInsertCss(shadow, cssText);
-          hasPermission() && handleRootNodeObserve(shadow, observer);
+          !def.array.observer.has(shadow) && handleRootNodeObserve(shadow, observer);
         }
 
         function handleBoldStyles({ pendingNodeSet, recheck }) {
@@ -3678,36 +3664,28 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           processBatch(pendingNodeSet.values(), batchSize, checkingBold, fixingBold);
         }
 
-        function qAS(expr, root) {
+        function qAS(expr, root, current) {
           const stack = [root];
           const eSet = new Set();
           const sSet = new Set();
-          if (root.nodeType === 1) eSet.add(root);
+          if (checkNodesForFix(root, [1])) eSet.add(root);
           else if (isShadow(root)) sSet.add(root);
-          let current;
           while ((current = stack.pop())) {
-            if (current.childElementCount === 0) continue;
-            const matches = qA(expr, current);
-            for (let i = 0, l = matches.length; i < l; i++) {
-              const el = matches[i];
+            if (!current || current.childElementCount === 0) continue;
+            qA(expr, current).forEach(el => {
               const shadow = el.shadowRoot;
               if (eSet.add(el) && shadow && !sSet.has(shadow)) sSet.add(shadow) && stack.push(shadow);
-            }
+            });
           }
           return { elementSet: eSet, shadowSet: sSet };
         }
 
-        function gCS(node, opt = null) {
-          if (node?.nodeType !== 1) return new Proxy(object(), { get: () => NaN });
-          return global.getComputedStyle(node, opt);
-        }
-
         function isBold(element, recheck) {
-          if (!element.isConnected) return boldStatusCache.delete(element), false;
-          let boldStatus = boldStatusCache.get(element);
+          if (!element.isConnected) return def.map.bold.delete(element), false;
+          let boldStatus = def.map.bold.get(element);
           if (typeof boldStatus === "undefined" || (recheck && boldStatus < 600)) {
-            boldStatus = gCS(element).fontWeight;
-            boldStatusCache.set(element, boldStatus);
+            boldStatus = computStyle(element).fontWeight;
+            def.map.bold.set(element, boldStatus);
           }
           return boldStatus >= 600;
         }
@@ -3742,24 +3720,23 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
         }
 
         function handleRootNodeObserve(context, observer) {
-          if (hasPermission()) ["mouseenter", "mouseleave"].forEach(event => context.addEventListener(event, mouseEventsHandler, { passive: true, capture: true }));
-          !observeNodeSet.has(context) && observeNodeSet.add(context) && observer && observer.observe(context, _Config);
+          def.array.observer.add(context) && observer && observer.observe(context, _Config);
         }
 
         function createChangeAttribute(value, isModeChanged) {
-          const compoundFns = el => void (isModeChanged && el.removeAttribute(value), el.classList.add(value));
+          const compoundFns = el => (isModeChanged && el.removeAttribute(value), el.classList.add(value));
           return {
-            add: el => void (checkConflict.flag ? compoundFns(el) : el.setAttribute(value, "")),
-            del: el => void (checkConflict.flag ? el.classList.remove(value) : el.removeAttribute(value)),
+            add: el => (checkConflict.flag ? compoundFns(el) : el.setAttribute(value, "")),
+            del: el => (checkConflict.flag ? el.classList.remove(value) : el.removeAttribute(value)),
           };
         }
 
         function getTransitionData(el) {
-          if (!transitionCache.has(el)) {
-            const { transition, transitionDelay, transitionDuration } = gCS(el);
+          if (!def.map.transition.has(el)) {
+            const { transition, transitionDelay, transitionDuration } = computStyle(el);
             const transtionInfo = { transition, delay: transitionDelay, duration: transitionDuration };
-            return transitionCache.set(el, transtionInfo), transtionInfo;
-          } else return transitionCache.get(el);
+            return def.map.transition.set(el, transtionInfo), transtionInfo;
+          } else return def.map.transition.get(el);
         }
 
         function mouseEventsHandler(event) {
@@ -3775,8 +3752,8 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
         }
 
         function removeBoldCache(target, checkChildren = true) {
-          if (checkChildren) qA(queryString, target).forEach(item => void boldStatusCache.delete(item));
-          return boldStatusCache.delete(target) || !boldStatusCache.has(target);
+          if (checkChildren) qA(queryString, target || null).forEach(item => def.map.bold.delete(item));
+          return def.map.bold.delete(target) || !def.map.bold.has(target);
         }
 
         async function correctBoldStrokeProcess() {
@@ -3784,21 +3761,21 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           def.var.fixStroke = CONST_VALUES.o.fixStroke;
           def.var.boldObserver = await new NodeObserver().startObserver({ name: "correctBoldStroke", callback: correctBoldHandler, config: _Config }).then(r => r?.observer);
           handleRootNodeObserve(document, def.var.boldObserver);
-          if (!hasPermission()) return;
+          if (!hasPermission() || DEBUG(`Correct.Bold.Active${IN_FRAMES}:`, { eventType: "init" })) return;
+          ["mouseenter", "mouseleave"].forEach(event => document.addEventListener(event, mouseEventsHandler, { passive: true, capture: true }));
           addLoadEvents.addFinalFn(correctBoldPassive, "readystatechange", boldFixCSSText, document, true);
-          if (global.navigation) global.navigation.addEventListener("navigate", handleNavigateEvent);
-          else ["pushState", "replaceState"].forEach(event => global.addEventListener(event, handleNavigateEvent));
-          return !DEBUG(`CorrectBold.Active${IN_FRAMES}:`, { eventType: "init" });
+          if (global.navigation) eventManager.add(global.navigation, "navigate", handleNavigateEvent);
+          else eventManager.add(global, "pushState replaceState", handleNavigateEvent);
 
           function correctBoldHandler({ mutations, observer }) {
             try {
-              if (mutationNodeSet.clear() || sessionFlag) return conflictReport();
+              if (def.array.mutation.clear() || sessionFlag) return conflictReport();
               mutations.forEach(mutation => {
                 if (mutation.target === document.head) return;
-                if (mutation.type === "childList") return processChildListMutations(mutation, mutationNodeSet);
-                if (hasPermission() && mutation.type === "attributes") processAttributesMutations(mutation, mutationNodeSet, observer);
+                if (mutation.type === "childList") return processChildListMutations(mutation, def.array.mutation);
+                if (hasPermission() && mutation.type === "attributes") processAttributesMutations(mutation, def.array.mutation);
               });
-              if (mutationNodeSet.size > 0) mutationListMonitor(mutationNodeSet, observer);
+              if (def.array.mutation.size > 0) mutationListMonitor(def.array.mutation, observer);
             } catch (e) {
               if (e.message.includes("callback conflict")) handleCallbackLimit(observer);
               ERROR(`${e.name} in FixBoldProcess:`, e.message);
@@ -3841,8 +3818,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
 
           function handleRemovedNode(node, shadow) {
             if (!checkNodesForFix(node)) return;
-            if ((shadow = node.shadowRoot)) observeNodeSet.delete(shadow);
-            removeBoldCache(node) && shadow && ["mouseenter", "mouseleave"].forEach(event => shadow.removeEventListener(event, mouseEventsHandler, { passive: true, capture: true }));
+            if ((shadow = node.shadowRoot)) def.array.observer.delete(shadow);
           }
 
           function hasFixedBoldFlagChange(newValue, oldValue, className) {
@@ -3916,10 +3892,10 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
 
           function handleCallbackLimit(observer) {
             observer.disconnect();
-            if (global.navigation) global.navigation.removeEventListener("navigate", handleNavigateEvent);
-            else ["pushState", "replaceState"].forEach(event => global.removeEventListener(event, handleNavigateEvent));
-            observeNodeSet.forEach(shadow => ["mouseenter", "mouseleave"].forEach(event => shadow.removeEventListener(event, mouseEventsHandler, { passive: true, capture: true })));
-            delete def.var.boldObserver && observeNodeSet.clear();
+            if (global.navigation) eventManager.remove(global.navigation, "navigate", handleNavigateEvent);
+            else eventManager.remove(global, "pushState replaceState", handleNavigateEvent);
+            ["mouseenter", "mouseleave"].forEach(event => document.removeEventListener(event, mouseEventsHandler, { passive: true, capture: true }));
+            delete def.var.boldObserver && def.array.observer.clear();
           }
         }
 
@@ -3932,8 +3908,8 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           const iRegexp = /@import (url\(([^)]+)\)|"([^"]+)")[ \w(),:]*;/g;
           const qRegexp = /[`'"]/g;
           const hasPermission = NOT_IN_EXCLUSION_LIST && isFixViewport && CONST_VALUES.o.fixViewport && def.var.curScale !== 1;
-          const correctViewport = () => void Promise.all([fixViewportLinks(), fixViewportStyles()]);
-          if (hasPermission) addLoadEvents.addFinalFn(correctViewport) && DEBUG(`correct.ViewportUnit${IN_FRAMES}:`, { eventType: "init" });
+          const correctViewport = () => Promise.all([fixViewportLinks(), fixViewportStyles()]);
+          if (hasPermission) addLoadEvents.addFinalFn(correctViewport) && DEBUG(`Correct.Viewport.Unit${IN_FRAMES}:`, { eventType: "init" });
           return { hasPermission, correctViewport };
 
           async function fixViewportLinks() {
@@ -3956,10 +3932,10 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
               const parent = node.parentNode ?? document.head;
               if (isAllowInlineStyle) {
                 const style = cE("style", { ...attributes, textContent: processedCssText });
-                return style && parent.contains(node) && parent.replaceChild(style, node) && DEBUG("Fixed.viewport.Link:", { linkNode: style });
+                return style && parent.contains(node) && parent.replaceChild(style, node) && DEBUG("Correct.viewport.Link:", { linkNode: style });
               }
               const style = GMaddElement(parent, "style", { ...attributes, textContent: processedCssText });
-              style && safeRemoveNode(node) && DEBUG("GM::Fixed.viewport.Link:", { linkNode: style });
+              style && safeRemoveNode(node) && DEBUG("GM::Correct.viewport.Link:", { linkNode: style });
             } catch (e) {
               ERROR(`${e.name} in ApplyStyleToOriginLink${IN_FRAMES}:`, e.message);
             }
@@ -3968,10 +3944,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           async function fixViewportStyles() {
             const ATTR_REGEX = /^(?:fr|gb)-css-[0-9a-f]{8}$/;
             const stylePromises = qA(`style:not([${def.static.viewport}]):not(.darkreader)`)
-              .filter(style => {
-                if (asArray(style.getAttributeNames()).SomeX(name => ATTR_REGEX.test(name))) return false;
-                return style.setAttribute(def.static.viewport, ""), true;
-              })
+              .filter(s => (asArray(s.getAttributeNames()).SomeX(name => ATTR_REGEX.test(name)) ? false : (s.setAttribute(def.static.viewport, ""), true)))
               .map(async style => await applyStyleToOriginStyle(style, style.textContent));
             await Promise.allSettled(stylePromises);
           }
@@ -3981,7 +3954,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
               if (!cssText || !cssText.includes("v") || !vRegexp.test(cssText)) return !node.getAttribute(def.static.viewport) && node.setAttribute(def.static.viewport, "ignore");
               node.id = node.id || generateRandomString(8);
               node.textContent = `/*# sourceURL= ${CUR_HREF}#internal */\r\n${replaceStyle(cssText, vRegexp, def.var.curScale)}`;
-              DEBUG("Fixed.viewport.Style:", { styleNode: node }) ?? node.setAttribute(def.static.viewport, "style");
+              DEBUG("Correct.viewport.Style:", { styleNode: node }) ?? node.setAttribute(def.static.viewport, "style");
             } catch (e) {
               ERROR(`${e.name} in ApplyStyleToOriginStyle:`, e.message) ?? node.setAttribute(def.static.viewport, "failed");
             }
@@ -4041,7 +4014,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
         function monitorMainStyleProcess({ hasPermission, correctViewport }) {
           if (typeof hasPermission !== "boolean" && typeof correctViewport !== "function") return;
           const ID_REGEX = /^(?![0-9-])[\u{1D68A}-\u{1D6A3}\w\-\u{1D670}-\u{1D689}]+$/u;
-          const deBounceViewport = createDeBounce({ fn: correctViewport, delay: 10, immed: false });
+          const deBounceViewport = createDeBounce({ fn: correctViewport, delay: 10 });
           const checkStyleNode = (node, nodeName) => {
             if (nodeName === "link") return node.getAttribute("rel")?.includes("stylesheet") && node.getAttribute("href");
             if (nodeName === "style") return node.id !== def.id.rndStyle && !node.classList?.contains("darkreader");
@@ -4050,10 +4023,10 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
             if (target === document.documentElement) return updateFlagAtRootElement(target);
             if (hasPermission) for (const node of addedNodes) if (checkStyleNode(node, getNodeName(node))) return deBounceViewport();
           };
-          const getCssText = cssRules => getObjectType.call(cssRules) === "[object CSSRuleList]" && arrayFrom(cssRules, rule => rule.cssText).join("");
+          const getCssText = cssRules => oS.call(cssRules) === "[object CSSRuleList]" && arrayFrom(cssRules, rule => rule.cssText).join("");
           const updateStyleWithNewRootID = htmlID => {
-            const sheet = getMainStyleSheets({ primary: true }) ?? object();
-            const css = (sheet.textContent ?? getCssText(sheet.cssRules) ?? tStyle).replace(DOCUMENTID_REGEXP, `#${htmlID}`);
+            const style = getStyleSheets({ primary: true })?.[0] ?? object();
+            const css = (getCssText(style.sheet.cssRules) ?? tStyle).replace(DOCUMENTID_REGEXP, `#${htmlID}`);
             setAdoptedStyleSheets({ target: document, css, id: def.id.rndStyle, primary: true }) && INFO(`%c[MO]${IN_FRAMES}[HTML.ID]: #${htmlID}`, fullStyle("#1e90ff"));
           };
           const handleAttributesMutation = (target, oldValue) => {
@@ -4067,14 +4040,14 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           const handleRemovedNodesMutation = removedNodes => {
             for (const node of removedNodes) if (node.id === def.id.rndStyle && !node.dataset.frRemoved) return adoptMainStyleSheet({ review: true });
           };
-          const deBounceApotedStyleCheck = createDeBounce({ fn: adoptMainStyleSheet, delay: 20 });
+          const deBounceApotedStyleCheck = createDeBounce({ fn: adoptMainStyleSheet, delay: 50 });
           const mainHTMLHandler = ({ mutations }) => {
-            mutations.forEach(mutation => void handleHTMLProcess(mutation));
+            mutations.forEach(mutation => handleHTMLProcess(mutation));
             CUR_WINDOW_TOP && IS_ADOPTEDSTYLESHEET_MUTABLE && deBounceApotedStyleCheck({ review: true });
           };
           const config = { childList: true, subtree: true, attributeOldValue: true, attributeFilter: ["id"] };
           new NodeObserver().startObserver({ name: "Observe-element:html-style-link", callback: mainHTMLHandler, config });
-          const mainStyleHandler = ({ mutations }) => mutations.forEach(mutation => void handleRemovedNodesMutation(mutation.removedNodes));
+          const mainStyleHandler = ({ mutations }) => mutations.forEach(mutation => handleRemovedNodesMutation(mutation.removedNodes));
           requestHEAD.startObserver({ name: "Insert-fr-style", callback: mainStyleHandler, config: { childList: true } }).then(adoptMainStyleSheet);
         }
 
@@ -4083,9 +4056,9 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
         function processFrameworks() {
           const observeFrameHandler = ({ type, target, addedNodes, attributeName }) => {
             if (type !== "childList" && type !== "attributes") return;
-            const aNodes = arrayFrom(addedNodes).filter(node => getNodeName(node) === "iframe");
+            const aNodes = addedNodes.length ? [...addedNodes].filter(node => getNodeName(node) === "iframe") : [];
             (aNodes.length || (attributeName && getNodeName(target) === "iframe" && (target.src || target.srcdoc))) &&
-              adoptStyleIntoFrames({ action: type, nodeArray: aNodes.length ? aNodes : [target] });
+              adoptStyleIntoFrames({ asynchronous: true, action: type, nodeArray: aNodes.length ? aNodes : [target] });
           };
           const callback = ({ mutations }) => document.readyState === "complete" && mutations.forEach(observeFrameHandler);
           const config = { childList: true, subtree: true, attributeFilter: ["src", "srcdoc", "style"] };
@@ -4122,7 +4095,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
         () => {
           const msg = IS_CHN ? "\u91cd\u65b0\u5b89\u88c5\u6b63\u7248\u811a\u672c\u0020\ud83d\udd34" : "Reinstall the genuine script\u0020\ud83d\udd34";
           const source = "JUU4JUFBJUIxSlZpWSVFNyU5MCU4OSVFNiU5RiU5MyVFNSVBRCVCQSVFOCU4MiVCQXAyTyVFNiU5MyU5MzAlRTglODUlOTF0JUU1JUIyJTgwJUU1JUFFJTlBJUU4JTg2JUJBZQ==";
-          const callback = u => GMregisterMenuCommand(`\ufff0\ud83d\udd34 ${msg}`, () => void GMopenInTab(u)) && __console("error", `${msg} ${def.var.scriptName} ${u}`);
+          const callback = u => GMregisterMenuCommand(`\ufff0\ud83d\udd34 ${msg}`, () => GMopenInTab(u)) && __console("error", `${msg} ${def.var.scriptName} ${u}`);
           return { callback, code: decrypt(source) };
         },
         async _config_data_ => {
@@ -4156,7 +4129,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           return { monoSiteRules, monoFontList, monoFeature };
         },
         async exSite => {
-          const defaultExSite = (exSite = ["127.0.0.1", "localhost"]);
+          const defaultExSite = (exSite = ["127.0.0.1", "localhost", "map.baidu.com"]);
           try {
             const exSiteSave = await GMgetValue(EXCLUDESITES);
             if (exSiteSave) exSite = JSON.parse(decrypt(exSiteSave));
@@ -4207,7 +4180,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           try {
             const storedFontScaleDef = await GMgetValue(FONTSCALE);
             const fontScaleDefRule = storedFontScaleDef ? JSON.parse(decrypt(storedFontScaleDef)) : defaultScaleRule;
-            if (getObjectType.call(fontScaleDefRule) === "[object Object]" && safeObject.keys(fontScaleDefRule).length > 0) return fontScaleDefRule;
+            if (oS.call(fontScaleDefRule) === "[object Object]" && safeObject.keys(fontScaleDefRule).length > 0) return fontScaleDefRule;
           } catch (e) {
             ERROR(`${e.name} in FontScaleDef.JSON.parse:`, e.message) ?? GMdeleteValue(FONTSCALE);
           }
@@ -4235,7 +4208,38 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
           }
         }
       );
-    })(initTrustedTypesPolicy(), safeJSON, sessionStorage?.getItem(def.static.navinfo));
+    })(
+      initTrustedTypesPolicy(),
+      safeJSON,
+      sessionStorage?.getItem(def.static.navinfo),
+      ((h, i, r = new WeakMap()) => {
+        const { addEventListener: aEL, removeEventListener: rEL } = EventTarget.prototype;
+        const g = (e, t, f, o) => ({ rG: r.get(e)?.get(t), k: `${f.name || h(fS.call(f))}:${f.length}:${typeof o === "boolean" ? o : safeJSON.stringify(o)}` });
+        const s = (a, e, t, f, o, k = t.trim().split(/\s+/)) => (k.length > 1 ? (k.forEach(v => a(e, v, f, o)), 0) : k[0]);
+        return (i = {
+          add(e, t, f, o = false) {
+            if (!e || !t || typeof f !== "function" || !(t = s(i.add, e, t, f, o))) return;
+            let l, rG, oE, oF, aH;
+            if (o?.signal?.aborted) return;
+            if (o?.signal) (aH = () => i.remove(e, t, f, o)) && aEL.call(o.signal, "abort", aH, { once: true });
+            void ((l = r.get(e)) || r.set(e, (l = new Map())), (rG = l.get(t)) || l.set(t, (rG = new Map())));
+            const { k } = g(e, t, f, o);
+            if ((oE = rG.get(k))) void (rEL.call(e, t, oE.oF, o), o?.signal && oE.aH && rEL.call(o.signal, "abort", oE.aH));
+            void ((oF = (...a) => (o?.once && i.remove(e, t, f, o), f.apply(e, a))), rG.set(k, { oF, aH }), aEL.call(e, t, oF, o));
+          },
+          remove(e, t, f, o = false) {
+            if (!e || !t || typeof f !== "function" || !(t = s(i.remove, e, t, f, o))) return;
+            const { rG, k } = g(e, t, f, o);
+            let { oF, aH, l } = rG?.get(k) ?? {};
+            if (o?.signal && aH) rEL.call(o.signal, "abort", aH);
+            if (oF) void (rEL.call(e, t, oF, o), rG.delete(k), (l = r.get(e)), !rG.size && l.delete(t), !l.size && r.delete(e));
+          },
+        });
+      })((s, v = 2166136261) => {
+        for (let i = 0; i < s.length; i++) v = Math.imul(v ^ s.charCodeAt(i), 16777619) >>> 0;
+        return v.toString(16);
+      })
+    );
   },
   (function (methods) {
     const methodMap = new Map(Object.entries(methods));
