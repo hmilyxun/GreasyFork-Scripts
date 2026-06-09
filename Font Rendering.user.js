@@ -5,7 +5,7 @@
 // @name:en            Font Rendering (Customized)
 // @name:ko            글꼴 렌더링 (자체 사용 스크립트)
 // @name:ja            フォントのレンダリング
-// @version            2026.06.06.1
+// @version            2026.06.10.1
 // @author             F9y4ng
 // @description        无需安装MacType，优化浏览器字体渲染效果，让每个页面的字体变得更有质感。默认使用“微软雅黑”字体，也可根据喜好自定义其他字体使用。脚本针对浏览器字体渲染提供了字体重写、字体平滑、字体缩放、字体描边、字体阴影、对特殊样式元素的过滤和许可、自定义等宽字体等高级功能。脚本支持全局渲染与个性化渲染功能，可通过“单击脚本管理器图标”或“使用快捷键”呼出配置界面进行参数配置。脚本已兼容绝大部分主流浏览器及主流脚本管理器，且兼容常用的油猴脚本和浏览器扩展。
 // @description:zh-CN  无需安装MacType，优化浏览器字体渲染效果，让每个页面的字体变得更有质感。默认使用“微软雅黑”字体，也可根据喜好自定义其他字体使用。脚本针对浏览器字体渲染提供了字体重写、字体平滑、字体缩放、字体描边、字体阴影、对特殊样式元素的过滤和许可、自定义等宽字体等高级功能。脚本支持全局渲染与个性化渲染功能，可通过“单击脚本管理器图标”或“使用快捷键”呼出配置界面进行参数配置。脚本已兼容绝大部分主流浏览器及主流脚本管理器，且兼容常用的油猴脚本和浏览器扩展。
@@ -148,7 +148,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
       },
       static: { once: "fr-init-once", conflict: "fr-callback-conflict", viewport: "data-fr-viewport", navinfo: "__Navigation#INFO__" },
       var: {
-        curVersion: getMetaValue("version") ?? GMinfo.script.version ?? "2026.06.06.0",
+        curVersion: getMetaValue("version") ?? GMinfo.script.version ?? "2026.06.10.0",
         scriptName: getMetaValue(`name:${getLanguages()}`) ?? decrypt("Rm9udCUyMFJlbmRlcmluZyUyMChDdXN0b21pemVkKQ=="),
         scriptAuthor: getMetaValue("author") ?? GMinfo.script.author ?? decrypt("Rjl5NG5n"),
       },
@@ -790,12 +790,14 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
       /* CUSTOMIZE_UPDATE_PROMPT_INFORMATION */
 
       const UPDATE_VERSION_NOTICE = IS_CHN
-        ? `<li class="${def.const.seed}.fixed">修复特定的异步加载 iframe 的渲染异常问题。</li>
+        ? `<li class="${def.const.seed}.fixed">修正自定义等宽字体功能无法开启的问题。</li>
+            <li class="${def.const.seed}.fixed">修复特定的异步加载 iframe 的渲染异常问题。</li>
             <li class="${def.const.seed}.fixed">优化脚本样式插入函数，减少内存泄漏风险。</li>
             <li class="${def.const.seed}.fixed">优化事件监听器函数，减少内存泄漏风险。</li>
             <li class="${def.const.seed}.fixed">优化脚本核心基础函数以提升运行性能。</li>
             <li class="${def.const.seed}.fixed">修复一些已知的问题，优化代码，优化样式。</li>`
-        : `<li class="${def.const.seed}.fixed">Fixed rendering issues with async-loading iframe.</li>
+        : `<li class="${def.const.seed}.fixed">Fixed custom monospces function cannot turning on.</li>
+            <li class="${def.const.seed}.fixed">Fixed rendering issues with async-loading iframe.</li>
             <li class="${def.const.seed}.fixed">Optimized style inserter to reduce memory leaks.</li>
             <li class="${def.const.seed}.fixed">Optimized event listener to reduce memory leaks.</li>
             <li class="${def.const.seed}.fixed">Optimized script core functions for performance.</li>
@@ -3078,6 +3080,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                 let [custom_MonoSiteRules, custom_MonoFontList, custom_MonoFontFeature] = monospaceNodes.map(node => convertHtmlToText(node.value.trim()));
                 removeKeyboardEvent({ signal: openRenderPanel.signal }, ...monospaceNodes);
                 const [monoSiteRulesNode, monoFontNode, monoFeatureNode] = monospaceNodes;
+                const customMonoTrigger = qS(`#${def.id.iscusmono}`, frDialog.shadow);
                 eventManager.add(monoSiteRulesNode, "change", () => (custom_MonoSiteRules = standardizeString(monoSiteRulesNode, false, true)), { signal: frDialog.signal });
                 eventManager.add(monoFontNode, "change", () => (custom_MonoFontList = standardizeString(monoFontNode, false, true, /'(?:ui-)?monospace',?/gi)), { signal: frDialog.signal });
                 eventManager.add(monoFeatureNode, "change", () => (custom_MonoFontFeature = standardizeString(monoFeatureNode, true, true, /[^\w",\- ]/g)), { signal: frDialog.signal });
@@ -3107,7 +3110,7 @@ void (function (ctx, uctx, sctx, fontRendering, arrayProxy, customFns) {
                     !custom_MonoSiteRules ? GMdeleteValue(MONORULES) : saveData(MONORULES, uniq(monoSiteRulesArray));
                     !custom_MonoFontList ? GMdeleteValue(MONOFONTS) : saveData(MONOFONTS, monospaced_fontListString);
                     !custom_MonoFontFeature ? GMdeleteValue(MONOFEATS) : saveData(MONOFEATS, custom_MonoFontFeature);
-                    saveData(CONFIGURE, { ..._config_data_, isCustomMono: Boolean(qS(`#${def.id.iscusmono}`, frDialog.shadow)?.checked) });
+                    saveData(CONFIGURE, { ..._config_data_, isCustomMono: Boolean(customMonoTrigger?.checked) });
                     const messageText = IS_CHN
                       ? `<p class="${def.const.seed}.clr:green">您提交的自定义等宽字体数据已保存成功！</p><p>当前页面将在您确认后自动刷新。</p><p class="${def.const.seed}.clr:ff7f50 ${def.const.seed}.fs:12p">注：格式错误的输入内容已被自动过滤。</p>`
                       : `<p class="${def.const.seed}.clr:green">Custom Monospaced Data saved successfully!</p><p>The page will refresh after confirmation.</p><p class="${def.const.seed}.clr:ff7f50 ${def.const.seed}.fs:12p">Note: Incorrect content has been filtered.</p>`;
