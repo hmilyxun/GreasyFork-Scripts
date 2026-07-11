@@ -5,7 +5,7 @@
 // @name:en            Font Rendering (Customized)
 // @name:ja            フォントレンダリング (カスタム)
 // @name:ko            폰트 렌더링 (개인용 스크립트)
-// @version            2026.07.11.1
+// @version            2026.07.11.2
 // @author             F9y4ng
 // @description        无需 MacType，享受细腻高质感的网页阅读体验。脚本默认采用“微软雅黑”，支持自定义替换。面向进阶排版需求，集成字体重写、抗锯齿平滑、动态缩放、描边阴影、特殊样式过滤（白名单）及自定义等宽字体等高级功能。完美支持“全局渲染”与“站点个性化”双模式，点击图标或快捷键即可唤出配置面板。全面兼容主流浏览器、脚本管理器及常用扩展。
 // @description:zh-CN  无需 MacType，享受细腻高质感的网页阅读体验。脚本默认采用“微软雅黑”，支持自定义替换。面向进阶排版需求，集成字体重写、抗锯齿平滑、动态缩放、描边阴影、特殊样式过滤（白名单）及自定义等宽字体等高级功能。完美支持“全局渲染”与“站点个性化”双模式，点击图标或快捷键即可唤出配置面板。全面兼容主流浏览器、脚本管理器及常用扩展。
@@ -991,7 +991,7 @@ void (function (ctx, uctx, sctx) {
           WGHT_REGEXP = /"wght"\s+(\d+)/, TRIMLEFT = /^\s*(\S.{0,18})/, THREADSHOLD = Math.min(Math.min(navigator.hardwareConcurrency || 4, 16) * 15, 2e2),
           hasDirectTextChild = el => { let n = el.firstChild; while (n) { if (n.nodeType === 3 && BLANK_REGEXP.test(n.nodeValue)) { return true } n = n.nextSibling } return false },
           safeTrim = v => { const l = v.length; if (l < 200) { const t = v.trim(); return l < 20 ? t : t.slice(0, 19) } const m = TRIMLEFT.exec(v); return m ? m[1].trimEnd() : "" },
-          isElementBold = el => {
+          isFormsElement = el => /^(INPUT|TEXTAREA|SELECT|BUTTON)$/i.test(el.tagName), isElementBold = el => {
             const inlineWeight = el.style?.fontWeight; let isBold = inlineWeight === "bold" || inlineWeight === "bolder" || (Number(inlineWeight)) >= 600;
             if (!isBold) {
               const win = el.ownerDocument?.defaultView || $, style = win.getComputedStyle(el), { fontWeight, fontVariationSettings } = style;
@@ -1044,7 +1044,9 @@ void (function (ctx, uctx, sctx) {
           scanAll(enable, activeCustomCss) {
             const roots = [document.body], previousOverride = this.isProcessingOverride, previousCss = this.activeCustomCss;
             if (typeof enable === "boolean") { this.isProcessingOverride = enable; this.activeCustomCss = enable ? activeCustomCss : null } try {
-              for (const ref of this.knownShadows) { const root = ref.deref(); if (root) { Array_push(roots, root) } else { this.knownShadows.delete(ref) } } this.processBatch(roots);
+              for (const ref of this.knownShadows) {
+                const root = ref.deref(); if (root && root.isConnected) { Array_push(roots, root) } else { this.knownShadows.delete(ref) }
+              } this.processBatch(roots);
             } finally { if (typeof enable === "boolean") { this.isProcessingOverride = previousOverride; this.activeCustomCss = previousCss } }
           }
           hijackHistoryRouting() {
@@ -1055,9 +1057,9 @@ void (function (ctx, uctx, sctx) {
             } addListener($, "popstate", () => { this.handleSPARouteChange() });
           }
           handleSPARouteChange() {
-            let isResolved = false; this.reEvalNodesQueue.clear(); clearTimeout(this.spaTimer);
-            const triggerScan = () => { if (isResolved) { return } isResolved = true; clearTimeout(this.spaTimer); rAF(() => this.scanAll()) };
-            NetworkTracker?.startTracking(triggerScan); this.spaTimer = setTimeout(triggerScan, 2e3);
+            let isResolved = false; this.reEvalNodesQueue.clear(); clearTimeout(this.spaTimer); const timeout = NetworkTracker ? 2e3 : 200,
+              triggerScan = () => { if (isResolved) { return } isResolved = true; clearTimeout(this.spaTimer); rAF(() => this.scanAll()) };
+            NetworkTracker?.startTracking(triggerScan); this.spaTimer = setTimeout(triggerScan, timeout);
           }
           hijackShadowDOM() {
             const self = this; Element.prototype.attachShadow = function (init) {
@@ -1122,7 +1124,7 @@ void (function (ctx, uctx, sctx) {
                   this.observedRoots.add(currentNode.shadowRoot); const shadowRef = new $.WeakRef(currentNode.shadowRoot);
                   this.knownShadows.add(shadowRef); this.shadowCleanupRegistry.register(currentNode.shadowRoot, shadowRef);
                   this.observe(currentNode.shadowRoot); this.injectShadowRootStyle(currentNode.shadowRoot); this.processBatch([currentNode.shadowRoot], isReEval);
-                } if (hasDirectTextChild(currentNode)) { readQueue.add(currentNode) } currentNode = walker.nextNode();
+                } if (isFormsElement(currentNode) || hasDirectTextChild(currentNode)) { readQueue.add(currentNode) } currentNode = walker.nextNode();
               }
             } this.evaluateNodesExact(readQueue, isReEval);
           }
@@ -1145,7 +1147,7 @@ void (function (ctx, uctx, sctx) {
 
       class BoldHoverDetector {
         constructor(boldFixCss, isLazyload, styleManager) {
-          this.styleContent = boldFixCss; this.lazyload = isLazyload; this.styleManager = styleManager;
+          this.styleContent = boldFixCss; this.lazyload = isLazyload; this.styleManager = styleManager; this.formsRegexp = /^(INPUT|TEXTAREA|SELECT|BUTTON)$/i;
           this.START_DELAY = 20; this.LEAVE_DELAY = 20; this.STABLE_FRAMES = 3; this.MAX_POLL_MS = 1200; this.BOLD_THRESHOLD = 600; this.MAX_CHILD_CHECK = 3; this.S_REG = /\S/;
           this._weightCache = Object_create(null); this.state = new WeakMap(); this.watchSet = new Set(); this.activeTimers = new Set(); this._started = false; this.rafId = null;
           this._onEnter = this._onEnter.bind(this); this._onLeave = this._onLeave.bind(this); this._rafLoop = this._rafLoop.bind(this);
@@ -1194,6 +1196,7 @@ void (function (ctx, uctx, sctx) {
           } if (this.watchSet.size > 0) { this.rafId = rAF(this._rafLoop) }
         }
         _forEachTextElement(rootEl, callback) {
+          if (this.formsRegexp.test(rootEl.tagName)) { if (this.constructor.isWorthChecking(rootEl)) { callback(rootEl) } return }
           if (this._hasDirectTextNode(rootEl) && this.constructor.isWorthChecking(rootEl)) { callback(rootEl) }
           let count = 0; const walker = document.createTreeWalker(rootEl, 4, { acceptNode: node => (this.S_REG.test(node.nodeValue) ? 1 : 2) });
           let textNode; while ((textNode = walker.nextNode()) && count < this.MAX_CHILD_CHECK) {
@@ -1330,7 +1333,7 @@ void (function (ctx, uctx, sctx) {
             }, mouseProps = ["clientX", "clientY", "pageX", "pageY", "layerX", "layerY", "offsetX", "offsetY", "x", "y"];
             for (let i = 0; i < 10; ++i) { processProp(MouseEvent.prototype, mouseProps[i], false) }
             const windowProps = ["innerWidth", "innerHeight", "pageXOffset", "pageYOffset", "scrollX", "scrollY", ...(props.window || [])],
-              winLen = windowProps.length, contexts = ctx !== uctx ? [ctx, uctx] : [ctx];
+              winLen = windowProps.length, contexts = !GMcontextMode && ctx !== uctx ? [ctx, uctx] : [ctx];
             for (let j = 0; j < contexts.length; ++j) { for (let i = 0; i < winLen; ++i) { processProp(contexts[j], windowProps[i], false) } }
             const elementProps = props.element || []; for (let i = 0; i < elementProps.length; ++i) { processProp(Element.prototype, elementProps[i], false) }
             processProp(Element.prototype, "scrollLeft", true); processProp(Element.prototype, "scrollTop", true);
@@ -2695,10 +2698,10 @@ void (function (ctx, uctx, sctx) {
         const exportFn = function (fn, context) { return typeof exportFunction === "function" ? exportFunction(fn, context) : fn };
         if (ctx.trustedTypes) { ctx.trustedTypes.createPolicy = exportFn(createPolicyWrapper, ctx.trustedTypes) }
         if (ctx.TrustedTypePolicyFactory?.prototype) { ctx.TrustedTypePolicyFactory.prototype.createPolicy = exportFn(createPolicyWrapper, ctx.TrustedTypePolicyFactory.prototype) }
-        if (!isRawContent && uctx.TrustedTypePolicyFactory?.prototype) { uctx.TrustedTypePolicyFactory.prototype.createPolicy = exportFn(createPolicyWrapper, uctx.TrustedTypePolicyFactory.prototype) }
+        if (!GMcontextMode && uctx.TrustedTypePolicyFactory?.prototype) { uctx.TrustedTypePolicyFactory.prototype.createPolicy = exportFn(createPolicyWrapper, uctx.TrustedTypePolicyFactory.prototype) }
       } catch (e) { warn(i18n.t("TrustedHTML"), e.message) } return defaultPolicy;
     })(), (function () {
-      if (isRawGreasemonkey) { return } let activeRequests = 0, isTracking = false, onCompleteCallback = null; const checkRequests = () => {
+      if (isRawGreasemonkey || GMcontextMode) { return } let activeRequests = 0, isTracking = false, onCompleteCallback = null; const checkRequests = () => {
         if (isTracking && activeRequests === 0 && onCompleteCallback) { setTimeout(() => { onCompleteCallback(); isTracking = false }, 0) }
       }, originalFetch = uctx.fetch; uctx.fetch = function (...args) {
         if (isTracking) { activeRequests++ } try { return Function_apply(originalFetch, this, args) } catch { void 0 } finally { if (isTracking) { activeRequests--; checkRequests() } }
