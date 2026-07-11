@@ -5,7 +5,7 @@
 // @name:zh-TW         優雅的搜尋引擎助手
 // @name:ru            Помощник поисковой системы
 // @name:ja            優雅な検索エンジン助手
-// @version            2026.06.06.1
+// @version            2026.07.11.1
 // @author             F9y4ng
 // @description        Alias "Search Engine Assistant", le script aide à la navigation entre les moteurs de recherche, à la personnalisation des préférences, à la mise en évidence des mots-clés, à l'élimination des redirections et des publicités et au filtrage des résultats. Compatible avec Baidu, Google, Bing, Duckduckgo, Yandex, Sogou, Qwant, Ecosia, You, Startpage, Brave, Yahoo, Yep, Mojeek, searXNG et bien d'autres moteurs de recherche célèbres.
 // @description:en     "Elegant search engine assistant" allows switching between engines; supports custom engines, keyword highlighting; offers redirect removal, ad blocking, keyword filtering, and auto-updates; compatible with Baidu, Google, Bing, Duckduckgo, Yandex, Sogou, Qwant, Ecosia, You, Startpage, Brave, Yahoo, Yep, Mojeek, searXNG and more.
@@ -253,7 +253,7 @@
 // @grant              GM.registerMenuCommand
 // @grant              GM_xmlhttpRequest
 // @grant              GM.xmlHttpRequest
-// @note               {"CN":"优化脚本核心基础函数以提升运行性能。","EN":"Optimized script core functions for performance."}
+// @note               {"CN":"修正在 Greasemonkey 中运行出错的问题。","EN":"Fixed a runtime error in Greasemonkey."}
 // @note               {"CN":"修正一些已知问题，优化代码，优化样式。","EN":"Fixed some known issues, optimized code & style."}
 // @compatible         Edge version≥88 (Compatible Tampermonkey, Violentmonkey)
 // @compatible         Chrome version≥88 (Compatible Tampermonkey, Violentmonkey)
@@ -275,35 +275,31 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
    * SET TO "TRUE" FOR SCRIPT DEBUGGING, MAY CAUSE THE SCRIPT TO RUN SLOWLY.   *
    * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-  const IS_OPEN_DEBUG = false;
+  const IS_OPEN_DEBUG = false,
 
-  /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-   * LICENSE FOR OPEN SOURCE USE: `GPLv3 ONLY`.                                *
-   * THE CODE IS COMPLETELY OPEN AND FREE, AND DOES NOT ACCEPT UNAUTHORIZED    *
-   * DISTRIBUTION AS THIRD-PARTY STANDALONE SCRIPTS. IN CASE OF ERRORS, USAGE  *
-   * PROBLEMS OR NEW FEATURES, PLEASE FEEDBACK IN GITHUB ISSUES, THANK YOU!    *
-   * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+    /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+     * LICENSE FOR OPEN SOURCE USE: `GPLv3 ONLY`.                                *
+     * THE CODE IS COMPLETELY OPEN AND FREE, AND DOES NOT ACCEPT UNAUTHORIZED    *
+     * DISTRIBUTION AS THIRD-PARTY STANDALONE SCRIPTS. IN CASE OF ERRORS, USAGE  *
+     * PROBLEMS OR NEW FEATURES, PLEASE FEEDBACK IN GITHUB ISSUES, THANK YOU!    *
+     * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-  const toolkit = {
-    debugging: IS_OPEN_DEBUG,
-    safeSandbox: {
-      atob: sctx.atob.bind(sctx),
-      btoa: sctx.btoa.bind(sctx),
-      alert: ctx.alert.bind(ctx),
-      prompt: ctx.prompt.bind(ctx),
-      confirm: ctx.confirm.bind(ctx),
-      setTimeout: ctx.setTimeout.bind(uctx),
-      requestAnimationFrame: ctx.requestAnimationFrame.bind(uctx),
-      cancelAnimationFrame: ctx.cancelAnimationFrame.bind(uctx),
-      console: sctx.Object.assign(customFns.oC(), ctx.console),
+    toolkit = {
+      debugging: IS_OPEN_DEBUG,
+      safeSandbox: {
+        atob: sctx.atob.bind(sctx), btoa: sctx.btoa.bind(sctx),
+        alert: ctx.alert.bind(ctx), prompt: ctx.prompt.bind(ctx),
+        confirm: ctx.confirm.bind(ctx), setTimeout: ctx.setTimeout.bind(uctx),
+        requestAnimationFrame: ctx.requestAnimationFrame.bind(uctx),
+        cancelAnimationFrame: ctx.cancelAnimationFrame.bind(uctx),
+        console: sctx.Object.assign(customFns.oC(), ctx.console),
+      },
+      safeArray: customFns.sP(sctx.Object, sctx.Array), safeObject: customFns.sP(sctx.Object, sctx.Object),
+      safeJSON: sctx.JSON.parse ? sctx.JSON : ctx.JSON.parse ? ctx.JSON : JSON.parse ? JSON : uctx.JSON,
+      info: typeof GM_info !== "undefined" ? GM_info : typeof GM !== "undefined" && GM.info ? GM.info : { script: {} },
     },
-    safeArray: customFns.sP(sctx.Object, sctx.Array),
-    safeObject: customFns.sP(sctx.Object, sctx.Object),
-    safeJSON: sctx.JSON.parse ? sctx.JSON : ctx.JSON.parse ? ctx.JSON : JSON.parse ? JSON : uctx.JSON,
-    info: typeof GM_info !== "undefined" ? GM_info : typeof GM !== "undefined" && GM.info ? GM.info : { script: {} },
-  };
-  const wrappedFrom = toolkit.safeArray.from ?? ctx.Array.from ?? uctx.Array.from;
-  const orginalFns = { oS: sctx.Object.prototype.toString, aF: (...af) => wrappedFrom(...af), aS: as => arrayProxy([...as]) };
+    wrappedFrom = toolkit.safeArray.from ?? ctx.Array.from ?? uctx.Array.from,
+    orginalFns = { oS: sctx.Object.prototype.toString, aF: (...af) => wrappedFrom(...af), aS: as => arrayProxy(wrappedFrom(as)) };
   typeof ctx.navigation === "undefined" && ["pushState", "replaceState"].forEach(m => (ctx.history[m] = customFns.eH(m)));
   searchEngineAssistant(ctx, uctx, toolkit, { ...orginalFns, ...customFns, cS: customFns.mS.filter(isNaN) });
 })(
@@ -314,118 +310,109 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
     try {
       const { contentWindow } = (iframe = GM_addElement("iframe", { id: "𝐬𝐚𝐟e.𝐰𝐢𝐧𝐝𝐨𝐰", style: "display:none", width: 0, height: 0 }));
       return !originalWindow.wrappedJSObject && iframe?.remove(), contentWindow ?? originalWindow;
-    } catch (_) {
-      return iframe?.remove(), originalWindow;
-    }
+    } catch (_) { return iframe?.remove(), originalWindow }
   })(typeof window !== "undefined" ? window : this, null),
   function (global, GMunsafeWindow, secureVars, customFuntions) {
     "use strict";
 
     /* PERFECTLY COMPATIBLE FOR GREASEMONKEY, TAMPERMONKEY, VIOLENTMONKEY, USERSCRIPTS 2024-03-15 F9Y4NG */
 
-    const { safeArray, safeObject, safeJSON, safeSandbox, debugging, info: GMinfo } = secureVars;
-    const { atob, btoa, alert, prompt, confirm, console, setTimeout, requestAnimationFrame, cancelAnimationFrame } = safeSandbox;
-    const { mS, cS, oS, aF: arrayFrom, aS: asArray, lS: localStorage, oC: object } = customFuntions;
-    const GMversion = GMinfo.version ?? GMinfo.scriptHandlerVersion ?? "unknown";
-    const GMscriptHandler = GMinfo.scriptHandler;
-    const GMsetValue = gmSelector("setValue");
-    const GMgetValue = gmSelector("getValue");
-    const GMdeleteValue = gmSelector("deleteValue");
-    const GMlistValues = gmSelector("listValues");
-    const GMopenInTab = gmSelector("openInTab");
-    const GMregisterMenuCommand = gmSelector("registerMenuCommand");
-    const GMxmlhttpRequest = gmSelector("xmlhttpRequest");
-    const GMcontextMode = gmSelector("contextMode");
+    const { safeArray, safeObject, safeJSON, safeSandbox, debugging, info: GMinfo } = secureVars,
+      { atob, btoa, alert, prompt, confirm, console, setTimeout, requestAnimationFrame, cancelAnimationFrame } = safeSandbox,
+      { mS, cS, oS, aF: arrayFrom, aS: asArray, lS: localStorage, oC: object } = customFuntions,
+      GMversion = GMinfo.version ?? GMinfo.scriptHandlerVersion ?? "unknown",
+      GMscriptHandler = GMinfo.scriptHandler, GMsetValue = gmSelector("setValue"), GMgetValue = gmSelector("getValue"),
+      GMdeleteValue = gmSelector("deleteValue"), GMlistValues = gmSelector("listValues"), GMopenInTab = gmSelector("openInTab"),
+      GMregisterMenuCommand = gmSelector("registerMenuCommand"), GMxmlhttpRequest = gmSelector("xmlhttpRequest"), GMcontextMode = gmSelector("contextMode"),
 
-    /* INITIALIZE_DEBUG_FUNCTIONS */
+      /* INITIALIZE_DEBUG_FUNCTIONS */
 
-    const IS_CHN = checkLocalChineseLanguage();
-    const IS_DEBUG = setDebuggerMode() || debugging;
-    const DEBUG = IS_DEBUG ? __console.bind(console, "log") : () => { };
-    const ERROR = IS_DEBUG ? __console.bind(console, "error") : () => { };
-    const COUNT = IS_DEBUG ? __console.bind(console, "count") : () => { };
+      IS_CHN = checkLocalChineseLanguage(), IS_DEBUG = setDebuggerMode() || debugging,
+      DEBUG = IS_DEBUG ? __console.bind(console, "log") : () => { },
+      ERROR = IS_DEBUG ? __console.bind(console, "error") : () => { },
+      COUNT = IS_DEBUG ? __console.bind(console, "count") : () => { },
 
-    /* INITIALIZE_COMMON_CONSTANTS */
+      /* INITIALIZE_COMMON_CONSTANTS */
 
-    const { pT: CUR_PROTOCOL, hN: CUR_HOST_NAME, pN: CUR_PATH_NAME, iT: CUR_WINDOW_TOP } = getLocationInfo();
-    const def = {
-      count: { clickTimer: 0, RAFTimer: 0, duplicate: 0 },
-      const: {
-        bing: Symbol(`${generateRandomString(10, "hex")}`),
-        raf: Symbol.for(`𐠱${generateRandomString(10, "date")}𐠔`),
-        caf: Symbol.for(`𐠱${generateRandomString(10, "date")}𐠲`),
-        cssAttrName: `gb-css-${generateRandomString(8, "hex")}`,
-        rndclassName: `SC${generateRandomString(8, "number")}`,
-        rndstyleName: `SS${generateRandomString(8, "number")}`,
-        rndadvName: `SA${generateRandomString(8, "number")}`,
-        expend: `ͽ${generateRandomString(6, "char")}ͽ`,
-        filtered: `ͼ${generateRandomString(6, "char")}ͼ`,
-        disappear: `ͽ${generateRandomString(7, "date")}ͼ`,
-        translucent: `ͼ${generateRandomString(7, "date")}ͽ`,
-        rndButtonID: generateRandomString(10, "char"),
-        visited: generateRandomString(6, "mix"),
-        buttons: generateRandomString(6, "mix"),
-        loading: generateRandomString(6, "char"),
-        darkmode: generateRandomString(8, "mix"),
-        leftButton: generateRandomString(6, "mix"),
-        rightButton: generateRandomString(6, "mix"),
-        scrollspan: generateRandomString(8, "char"),
-        scrollbars: generateRandomString(8, "char"),
-        scrollbarsV2: generateRandomString(8, "mix"),
-        attachShadow: Element.prototype.attachShadow,
-        stopImmediatePropagation: Event.prototype.stopImmediatePropagation,
-      },
-      static: { once: "gb-init-once", purge: "gd-purge-attribute", anti: "gd-anti-redirect", warn: "data-filter-warn", navinfo: "__Navigation#INFO__" },
-      var: {
-        curVersion: getMetaValue("version") ?? GMinfo.script.version ?? "2026.06.06.0",
-        scriptName: getMetaValue(`name:${getLanguages()}`) ?? decrypt("U2VhcmNoJTIwRW5naW5lJTIwQXNzaXN0YW50"),
-        rIC: global.requestIdleCallback ? global.requestIdleCallback.bind(GMunsafeWindow) : (callback, { timeout }) => sleep(timeout).then(callback),
-      },
-      url: {
-        yandexIcon: decrypt("aHR0cHMlM0ElMkYlMkZmYXZpY29uLnlhbmRleC5uZXQlMkZmYXZpY29uJTJGdjI="),
-        backupIcon: decrypt("aHR0cHMlM0ElMkYlMkZzMjEuYXgxeC5jb20lMkYyMDI1JTJGMDclMkYyMCUyRnBWOGVMaTYucG5n"),
-        feedback: getMetaValue("supportURL") ?? GMinfo.script.supportURL ?? decrypt("aHR0cHMlM0ElMkYlMkZnaXRodWIuY29tJTJGRjl5NG5nJTJGR3JlYXN5Rm9yay1TY3JpcHRzJTJGaXNzdWVz"),
-        homepage: getMetaValue("homepageURL") ?? GMinfo.script.homepage ?? decrypt("aHR0cHMlM0ElMkYlMkZmOXk0bmcuZ2l0aHViLmlvJTJGR3JlYXN5Rm9yay1TY3JpcHRzJTJG"),
-      },
-      notice: {
-        rName: generateRandomString(8, "char"),
-        random: generateRandomString(6, "char"),
-        noticeX: generateRandomString(7, "char"),
-        appear: generateRandomString(6, "char"),
-        gberror: generateRandomString(6, "mix"),
-        linkerror: generateRandomString(7, "mix"),
-        item: generateRandomString(6, "mix"),
-        close: generateRandomString(6, "mix"),
-        center: generateRandomString(6, "mix"),
-        success: generateRandomString(7, "char"),
-        warning: generateRandomString(7, "char"),
-        info: generateRandomString(7, "char"),
-        error: generateRandomString(7, "char"),
-        checkbox: generateRandomString(6, "char"),
-        configuration: generateRandomString(7, "char"),
-        animated: generateRandomString(7, "char"),
-        stopUpdate: generateRandomString(6, "mix"),
-        searchButton: generateRandomString(6, "mix"),
-        favicon: generateRandomString(6, "mix"),
-        favicons: generateRandomString(6, "mix"),
-        searchList: generateRandomString(7, "mix"),
-        fieldset: generateRandomString(6, "char"),
-        legend: generateRandomString(6, "char"),
-        settingList: generateRandomString(7, "mix"),
-        readonly: generateRandomString(8, "mix"),
-        hk: generateRandomString(6, "mix"),
-        gj: generateRandomString(6, "mix"),
-        lw: generateRandomString(6, "mix"),
-        kh: generateRandomString(6, "mix"),
-        ar: generateRandomString(6, "mix"),
-        aa: generateRandomString(6, "mix"),
-        au: generateRandomString(6, "mix"),
-        grid: generateRandomString(7, "char"),
-        card: generateRandomString(7, "char"),
-      },
-    };
+      { pT: CUR_PROTOCOL, hN: CUR_HOST_NAME, pN: CUR_PATH_NAME, iT: CUR_WINDOW_TOP } = getLocationInfo(),
+      def = {
+        count: { clickTimer: 0, RAFTimer: 0, duplicate: 0 },
+        const: {
+          bing: Symbol(`${generateRandomString(10, "hex")}`),
+          raf: Symbol.for(`𐠱${generateRandomString(10, "date")}𐠔`),
+          caf: Symbol.for(`𐠱${generateRandomString(10, "date")}𐠲`),
+          cssAttrName: `gb-css-${generateRandomString(8, "hex")}`,
+          rndclassName: `SC${generateRandomString(8, "number")}`,
+          rndstyleName: `SS${generateRandomString(8, "number")}`,
+          rndadvName: `SA${generateRandomString(8, "number")}`,
+          expend: `ͽ${generateRandomString(6, "char")}ͽ`,
+          filtered: `ͼ${generateRandomString(6, "char")}ͼ`,
+          disappear: `ͽ${generateRandomString(7, "date")}ͼ`,
+          translucent: `ͼ${generateRandomString(7, "date")}ͽ`,
+          rndButtonID: generateRandomString(10, "char"),
+          visited: generateRandomString(6, "mix"),
+          buttons: generateRandomString(6, "mix"),
+          loading: generateRandomString(6, "char"),
+          darkmode: generateRandomString(8, "mix"),
+          leftButton: generateRandomString(6, "mix"),
+          rightButton: generateRandomString(6, "mix"),
+          scrollspan: generateRandomString(8, "char"),
+          scrollbars: generateRandomString(8, "char"),
+          scrollbarsV2: generateRandomString(8, "mix"),
+          attachShadow: Element.prototype.attachShadow,
+          stopImmediatePropagation: Event.prototype.stopImmediatePropagation,
+        },
+        static: { once: "gb-init-once", purge: "gd-purge-attribute", anti: "gd-anti-redirect", warn: "data-filter-warn", navinfo: "__Navigation#INFO__" },
+        var: {
+          curVersion: getMetaValue("version") ?? GMinfo.script.version ?? "2026.06.06.0",
+          scriptName: getMetaValue(`name:${getLanguages()}`) ?? decrypt("U2VhcmNoJTIwRW5naW5lJTIwQXNzaXN0YW50"),
+          rIC: global.requestIdleCallback ? global.requestIdleCallback.bind(GMunsafeWindow) : (callback, { timeout }) => sleep(timeout).then(callback),
+        },
+        url: {
+          yandexIcon: decrypt("aHR0cHMlM0ElMkYlMkZmYXZpY29uLnlhbmRleC5uZXQlMkZmYXZpY29uJTJGdjI="),
+          backupIcon: decrypt("aHR0cHMlM0ElMkYlMkZzMjEuYXgxeC5jb20lMkYyMDI1JTJGMDclMkYyMCUyRnBWOGVMaTYucG5n"),
+          feedback: getMetaValue("supportURL") ?? GMinfo.script.supportURL ?? decrypt("aHR0cHMlM0ElMkYlMkZnaXRodWIuY29tJTJGRjl5NG5nJTJGR3JlYXN5Rm9yay1TY3JpcHRzJTJGaXNzdWVz"),
+          homepage: getMetaValue("homepageURL") ?? GMinfo.script.homepage ?? decrypt("aHR0cHMlM0ElMkYlMkZmOXk0bmcuZ2l0aHViLmlvJTJGR3JlYXN5Rm9yay1TY3JpcHRzJTJG"),
+        },
+        notice: {
+          rName: generateRandomString(8, "char"),
+          random: generateRandomString(6, "char"),
+          noticeX: generateRandomString(7, "char"),
+          appear: generateRandomString(6, "char"),
+          gberror: generateRandomString(6, "mix"),
+          linkerror: generateRandomString(7, "mix"),
+          item: generateRandomString(6, "mix"),
+          close: generateRandomString(6, "mix"),
+          center: generateRandomString(6, "mix"),
+          success: generateRandomString(7, "char"),
+          warning: generateRandomString(7, "char"),
+          info: generateRandomString(7, "char"),
+          error: generateRandomString(7, "char"),
+          checkbox: generateRandomString(6, "char"),
+          configuration: generateRandomString(7, "char"),
+          animated: generateRandomString(7, "char"),
+          stopUpdate: generateRandomString(6, "mix"),
+          searchButton: generateRandomString(6, "mix"),
+          favicon: generateRandomString(6, "mix"),
+          favicons: generateRandomString(6, "mix"),
+          searchList: generateRandomString(7, "mix"),
+          fieldset: generateRandomString(6, "char"),
+          legend: generateRandomString(6, "char"),
+          settingList: generateRandomString(7, "mix"),
+          readonly: generateRandomString(8, "mix"),
+          hk: generateRandomString(6, "mix"),
+          gj: generateRandomString(6, "mix"),
+          lw: generateRandomString(6, "mix"),
+          kh: generateRandomString(6, "mix"),
+          ar: generateRandomString(6, "mix"),
+          aa: generateRandomString(6, "mix"),
+          au: generateRandomString(6, "mix"),
+          grid: generateRandomString(7, "char"),
+          card: generateRandomString(7, "char"),
+        },
+      };
 
-    if (checkRedundantScript(GMunsafeWindow)) return;
+    if (checkRedundantScript(GMunsafeWindow)) { return }
 
     /* INITIALIZE_SETTIMEOUT_AND_SETINTERVAL_FUNCTION_CLASSES */
 
@@ -438,13 +425,13 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
       _ticking(fn, type, interval, ...args) {
         const parsedInterval = Number(interval) || 0;
         let lastTime = performance.now();
-        const timer = ++def.count.RAFTimer;
-        const step = (currentTime = performance.now()) => {
-          const elapsed = currentTime - lastTime;
-          if (elapsed < parsedInterval) return this._setTimerMap(timer, type, step);
-          type === "interval" ? (lastTime = currentTime - (elapsed % parsedInterval)) && this._setTimerMap(timer, type, step) : this.clearTimeout(timer);
-          if (typeof fn === "function") fn.apply(this.context, args);
-        };
+        const timer = ++def.count.RAFTimer,
+          step = (currentTime = performance.now()) => {
+            const elapsed = currentTime - lastTime;
+            if (elapsed < parsedInterval) return this._setTimerMap(timer, type, step);
+            type === "interval" ? (lastTime = currentTime - (elapsed % parsedInterval)) && this._setTimerMap(timer, type, step) : this.clearTimeout(timer);
+            if (typeof fn === "function") fn.apply(this.context, args);
+          };
         this._setTimerMap(timer, type, step);
         return timer;
       }
@@ -577,10 +564,9 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
     function initTrustedTypesPolicy() {
       const policyOptions = { createHTML: s => s, createScript: s => s, createScriptURL: u => u };
       if (!global.trustedTypes?.createPolicy) return policyOptions;
-      const originalCreatePolicy = global.trustedTypes.createPolicy.bind(global.trustedTypes);
-      const whitelist = [{ host: "bing.com", policy: "rwflyoutDefault" }];
-      const policyName = global.trustedTypes.defaultPolicy?.name ?? asArray(whitelist).FindX(entry => CUR_HOST_NAME.endsWith(entry.host))?.policy ?? "default";
-      const defaultPolicy = global.trustedTypes.defaultPolicy ?? originalCreatePolicy(policyName, policyOptions);
+      const originalCreatePolicy = global.trustedTypes.createPolicy.bind(global.trustedTypes), whitelist = [{ host: "bing.com", policy: "rwflyoutDefault" }],
+        policyName = global.trustedTypes.defaultPolicy?.name ?? asArray(whitelist).FindX(entry => CUR_HOST_NAME.endsWith(entry.host))?.policy ?? "default",
+        defaultPolicy = global.trustedTypes.defaultPolicy ?? originalCreatePolicy(policyName, policyOptions);
       uniq([global, GMunsafeWindow]).forEach(w => (w.trustedTypes.createPolicy = (name, options) => (name === policyName ? defaultPolicy : originalCreatePolicy(name, options))));
       return defaultPolicy;
     }
@@ -589,37 +575,27 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
       const reportRedundanceError = () => {
         const errorText = IS_CHN
           ? `\ud83d\udea9【脚本冗余警告】发现冗余安装的脚本: "${def.var.scriptName}"，如刷新后问题依旧，请访问 ${def.url.feedback}/117 排查错误。`
-          : `\ud83d\udea9 [Redundance Warning] Found Redundant Scripts: '${def.var.scriptName}', if persists after reloading, please visit ${def.url.feedback}/117 to troubleshoot.`;
-        const troubleshoot = `\ufff8\ud83d\uded1 ${IS_CHN ? "发现冗余安装的脚本，点击排查！" : "Troubleshoot Redundance!"}`;
+          : `\ud83d\udea9 [Redundance Warning] Found Redundant Scripts: '${def.var.scriptName}', if persists after reloading, please visit ${def.url.feedback}/117 to troubleshoot.`,
+          troubleshoot = `\ufff8\ud83d\uded1 ${IS_CHN ? "发现冗余安装的脚本，点击排查！" : "Troubleshoot Redundance!"}`;
         return CUR_WINDOW_TOP && (__console("error", errorText), GMregisterMenuCommand(troubleshoot, () => GMopenInTab(`${def.url.feedback}/117`, false))), true;
-      };
-      const contentText = IS_CHN ? `警告：脚本的注入模式已设置为"content"，部分脚本功能可能受到限制。` : `Warning: The injection mode is set to "content" and some functions may be limited.`;
+      },
+        contentText = IS_CHN ? `警告：脚本的注入模式已设置为"content"，部分脚本功能可能受到限制。` : `Warning: The injection mode is set to "content" and some functions may be limited.`;
       if (GMcontextMode && CUR_WINDOW_TOP) __console("warn", `${def.var.scriptName} ${contentText}`);
       if (global[def.static.once] === true || document.documentElement?.hasAttribute(def.static.once)) return reportRedundanceError();
       (global[def.static.once] = true) && safeObject.freeze(def.const) && document.documentElement?.setAttribute(def.static.once, "");
     }
 
     async function getNavigatorInfo() {
-      const ua = navigator.userAgent;
-      const voucher = `${GMscriptHandler} ${GMversion}`;
-      const creditEngine = getRealBrowserEngine(global);
-      const userAgentData = await getUserAgentDataFromExtension();
-      if (userAgentData) return getBrowserInfoFromUAD(userAgentData);
+      const ua = navigator.userAgent, voucher = `${GMscriptHandler} ${GMversion}`, creditEngine = getRealBrowserEngine(global),
+        userAgentData = await getUserAgentDataFromExtension(); if (userAgentData) return getBrowserInfoFromUAD(userAgentData);
       const BROWSER_CONFIGS = [
-        { key: "OPR", brand: "Opera", engine: "Blink", as: "Chrome" },
-        { key: "Vivaldi", brand: "Vivaldi", engine: "Blink", as: "Chrome" },
-        { key: "YaBrowser", brand: "Yandex", engine: "Blink", as: "Chrome" },
-        { key: "Edg", brand: "Edge", engine: "Blink", as: "Chrome" },
-        { key: "Chromium", brand: "Chromium", engine: "Blink" },
-        { key: "Chrome", brand: "Chrome", engine: "Blink" },
-        { key: "LibreWolf", brand: "LibreWolf", engine: "Gecko", as: "Firefox" },
-        { key: "Zen", brand: "Zen", engine: "Gecko", as: "Firefox" },
-        { key: "PaleMoon", brand: "PaleMoon", engine: "Gecko", as: "Firefox" },
-        { key: "Waterfox", brand: "Waterfox", engine: "Gecko", as: "Firefox" },
-        { key: "Firefox", brand: "Firefox", engine: "Gecko" },
-        { key: "Konqueror", brand: "Konqueror", engine: "WebKit" },
-        { key: "Kindle", brand: "Kindle", engine: "WebKit", as: "Version" },
-        { key: "Safari", brand: "Safari", engine: "WebKit", as: "Version", verset: ["Version"] },
+        { key: "OPR", brand: "Opera", engine: "Blink", as: "Chrome" }, { key: "Vivaldi", brand: "Vivaldi", engine: "Blink", as: "Chrome" },
+        { key: "YaBrowser", brand: "Yandex", engine: "Blink", as: "Chrome" }, { key: "Edg", brand: "Edge", engine: "Blink", as: "Chrome" },
+        { key: "Chromium", brand: "Chromium", engine: "Blink" }, { key: "Chrome", brand: "Chrome", engine: "Blink" },
+        { key: "LibreWolf", brand: "LibreWolf", engine: "Gecko", as: "Firefox" }, { key: "Zen", brand: "Zen", engine: "Gecko", as: "Firefox" },
+        { key: "PaleMoon", brand: "PaleMoon", engine: "Gecko", as: "Firefox" }, { key: "Waterfox", brand: "Waterfox", engine: "Gecko", as: "Firefox" },
+        { key: "Firefox", brand: "Firefox", engine: "Gecko" }, { key: "Konqueror", brand: "Konqueror", engine: "WebKit" },
+        { key: "Kindle", brand: "Kindle", engine: "WebKit", as: "Version" }, { key: "Safari", brand: "Safari", engine: "WebKit", as: "Version", verset: ["Version"] },
         { key: "Trident", brand: "IE", engine: "Trident", verset: ["MSIE", "rv"] },
       ];
       return getBrowserInfoFromUA();
@@ -635,8 +611,7 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
 
       async function getUserAgentDataFromExtension(temp) {
         if (voucher.startsWith("Violentmonkey") && (temp = GMinfo.platform)) {
-          const { browserName, browserVersion, os, arch } = temp;
-          const [architecture, bitness] = arch?.split("-") ?? [];
+          const { browserName, browserVersion, os, arch } = temp, [architecture, bitness] = arch?.split("-") ?? [];
           let brands = [{ brand: capitalize(browserName), version: browserVersion }];
           if (parseFloat(browserVersion) < 57.0 && (temp = GMinfo.userAgent)) {
             const matches = temp.match(/\s(Chrom(?:e|ium)|Firefox)\/(\d+[.0-9]*)/i);
@@ -656,13 +631,13 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
       }
 
       function getBrowserInfoFromUAD(uad) {
-        const mapBrandPath = ({ brand: b, version: v }) => `${/Not[^a-z]*A[^a-z]*Brand/i.test(b) ? 9 : /^(?:Chrom(?:e|ium)|Firefox|Safari)$/i.test(b) ? 5 : 1}${b}\r${v}`;
-        const [brand, brandVersion] = uad.brands?.map(mapBrandPath).sort()[0]?.slice(1).split("\r") ?? [];
-        const engineMap = { Chrome: "Blink", Chromium: "Blink", Firefox: "Gecko", Safari: "WebKit" };
-        const mapEnginePath = ({ brand, version }) => /Chrom(?:e|ium)|Firefox|Safari/i.test(brand) && `${brand}\r${version}`;
-        const [engine, engineVersion] = uad.brands?.map(mapEnginePath).filter(Boolean)[0]?.split("\r") ?? [brand, brandVersion];
-        const engineInfo = { engine: engineMap[capitalize(engine)] ?? getEngineFromUA(), engineVersion: parseFloat(engineVersion) || 99, creditEngine };
-        const browserInfo = { brand: (brand?.split(/\s/) ?? []).slice(-1)[0] ?? "Unknown", brandVersion: formatVersion(brandVersion), os: getFullPlatformName(uad.platform) };
+        const mapBrandPath = ({ brand: b, version: v }) => `${/Not[^a-z]*A[^a-z]*Brand/i.test(b) ? 9 : /^(?:Chrom(?:e|ium)|Firefox|Safari)$/i.test(b) ? 5 : 1}${b}\r${v}`,
+          [brand, brandVersion] = uad.brands?.map(mapBrandPath).sort()[0]?.slice(1).split("\r") ?? [],
+          engineMap = { Chrome: "Blink", Chromium: "Blink", Firefox: "Gecko", Safari: "WebKit" },
+          mapEnginePath = ({ brand, version }) => /Chrom(?:e|ium)|Firefox|Safari/i.test(brand) && `${brand}\r${version}`,
+          [engine, engineVersion] = uad.brands?.map(mapEnginePath).filter(Boolean)[0]?.split("\r") ?? [brand, brandVersion],
+          engineInfo = { engine: engineMap[capitalize(engine)] ?? getEngineFromUA(), engineVersion: parseFloat(engineVersion) || 99, creditEngine },
+          browserInfo = { brand: (brand?.split(/\s/) ?? []).slice(-1)[0] ?? "Unknown", brandVersion: formatVersion(brandVersion), os: getFullPlatformName(uad.platform) };
         return { ...engineInfo, ...browserInfo, source: uad.source ?? "uad", voucher: uad.voucher };
       }
 
@@ -674,12 +649,9 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
       function getBrandAndVersionFromUA() {
         const getVersion = (str, offset, index) => (index = ua.indexOf(str)) !== -1 && ua.slice(index + offset).match(/\d+[.0-9]*/)?.[0];
         for (const { key, brand, engine, verset, as } of BROWSER_CONFIGS) {
-          if (!ua.includes(key)) continue;
-          const versionKey = verset ? asArray(verset).FindX(k => ua.includes(k)) : key;
-          if (!versionKey) continue;
-          const brandVersionRaw = getVersion(versionKey, versionKey.length + 1);
-          if (!brandVersionRaw) continue;
-          const engineVersionRaw = (as && getVersion(as, as.length + 1)) || getVersion(key, key.length + 1) || "99";
+          if (!ua.includes(key)) { continue } const versionKey = verset ? asArray(verset).FindX(k => ua.includes(k)) : key;
+          if (!versionKey) { continue } const brandVersionRaw = getVersion(versionKey, versionKey.length + 1);
+          if (!brandVersionRaw) { continue } const engineVersionRaw = (as && getVersion(as, as.length + 1)) || getVersion(key, key.length + 1) || "99";
           return { brand, brandVersion: formatVersion(brandVersionRaw), engine, engineVersion: parseFloat(engineVersionRaw) };
         }
         const unregistered = getUnregisteredBrandAndVersionFromUA();
@@ -691,182 +663,142 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
       }
 
       function getUnregisteredBrandAndVersionFromUA() {
-        const blackList = /version|mozilla|applewebkit|safari|khtml|like|gecko|mobile|chrome|firefox/i;
-        const matches = asArray(ua.matchAll(/([^/\s()]+)\/([\d.]+)/g)).reverse();
-        const [, name, ver] = matches.FindX(([, n]) => !blackList.test(n)) || ["", "Unknown", "0.0.0.0"];
-        const ev = ua.match(/(?:Chrom(?:e|ium)|Firefox|Version)\/(\d+[.0-9]*)/i)?.[1];
-        return { b: name, bv: formatVersion(ver), ev: parseFloat(ev || ver) || 99 };
+        const blackList = /version|mozilla|applewebkit|safari|khtml|like|gecko|mobile|chrome|firefox/i,
+          matches = asArray(ua.matchAll(/([^/\s()]+)\/([\d.]+)/g)).reverse(), [, name, ver] = matches.FindX(([, n]) => !blackList.test(n)) || ["", "Unknown", "0.0.0.0"],
+          ev = ua.match(/(?:Chrom(?:e|ium)|Firefox|Version)\/(\d+[.0-9]*)/i)?.[1]; return { b: name, bv: formatVersion(ver), ev: parseFloat(ev || ver) || 99 };
       }
 
       function getFullPlatformName(os) {
-        const platformMap = { Mac: "MacOS", Win: "Windows", "like Mac": "iOS", CrOS: "Chromium OS", X11: "Linux" };
-        return platformMap[os] ?? os;
+        const platformMap = { Mac: "MacOS", Win: "Windows", "like Mac": "iOS", CrOS: "Chromium OS", X11: "Linux" }; return platformMap[os] ?? os;
       }
 
       function getOSInfoFromUA() {
-        const platforms = ["like Mac", "iOS", "Mac", "Android", "Fedora", "Debian", "Ubuntu", "FreeBSD", "OpenBSD", "CrOS", "Linux", "Unix", "X11", "Xbox", "Win"];
-        const platform = asArray(platforms).FindX(p => ua.includes(p)) || "Unknown";
+        const platforms = ["like Mac", "iOS", "Mac", "Android", "Fedora", "Debian", "Ubuntu", "FreeBSD", "OpenBSD", "CrOS", "Linux", "Unix", "X11", "Xbox", "Win"],
+          platform = asArray(platforms).FindX(p => ua.includes(p)) || "Unknown";
         return getFullPlatformName(platform);
       }
     }
 
     function getLocationInfo() {
-      const { host: h, hostname: hN, pathname: pN, protocol: pT } = global.location;
-      const iT = global.self === global.top;
-      return { h, hN, pN, pT, iT };
+      const { host: h, hostname: hN, pathname: pN, protocol: pT } = global.location, iT = global.self === global.top; return { h, hN, pN, pT, iT };
     }
 
     function getMetaValue(str) {
-      const queryRegexp = new RegExp(`//\\s+@${toString(str)}\\s+(.+)`);
-      const metaValue = GMinfo.scriptMetaStr?.match(queryRegexp);
+      const queryRegexp = new RegExp(`//\\s+@${toString(str)}\\s+(.+)`), metaValue = GMinfo.scriptMetaStr?.match(queryRegexp);
       return metaValue?.[1] ?? ((str = str.match(/^name:([a-zA-Z-]+)$/)) && GMinfo.script.locales?.[str[1]]?.name);
     }
 
     function getLanguages(lang = navigator.language) {
-      const languages = new Set(["zh-CN", "zh-TW", "en", "ja", "ru"]);
-      return languages.has(lang) ? lang : lang.startsWith("zh") ? "zh-TW" : "en";
+      const languages = new Set(["zh-CN", "zh-TW", "en", "ja", "ru"]); return languages.has(lang) ? lang : lang.startsWith("zh") ? "zh-TW" : "en";
     }
 
     function setDebuggerMode() {
-      const key = decrypt("\u0052\u006a\u006c\u0035\u004e\u0047\u0035\u006e");
-      const value = new URLSearchParams(global.location.search).get("whoami");
-      return safeObject.is(key, value);
+      const key = decrypt("\u0052\u006a\u006c\u0035\u004e\u0047\u0035\u006e"), value = new URLSearchParams(global.location.search).get("whoami"); return safeObject.is(key, value);
     }
 
     function sleep(delay, { useCachedSetTimeout, instance } = {}) {
-      const timeoutFunction = useCachedSetTimeout ? setTimeout : rAF.setTimeout;
-      const resolveFunction = resolve => timeoutFunction(resolve, delay);
-      const sleepPromise = new Promise(resolveFunction);
-      const promiseFunction = value => sleepPromise.then(() => value);
-      promiseFunction.then = sleepPromise.then.bind(sleepPromise);
-      promiseFunction.catch = sleepPromise.catch.bind(sleepPromise);
+      const timeoutFunction = useCachedSetTimeout ? setTimeout : rAF.setTimeout, resolveFunction = resolve => timeoutFunction(resolve, delay),
+        sleepPromise = new Promise(resolveFunction), promiseFunction = value => sleepPromise.then(() => value);
+      promiseFunction.then = sleepPromise.then.bind(sleepPromise); promiseFunction.catch = sleepPromise.catch.bind(sleepPromise);
       return instance ? sleepPromise : promiseFunction;
     }
 
     function throttle({ fn, timer, delay, immed = false }) {
-      if (typeof fn !== "function" || !timer) return () => { };
+      if (typeof fn !== "function" || !timer) { return () => { } }
       return function (...args) {
-        const [name, context] = [Symbol.for(toString(timer)), this];
-        if (def.count[name]) return;
-        if (immed && def.count[name] !== null) fn.apply(context, args);
-        def.count[name] = rAF.setTimeout(() => ((def.count[name] = null), fn.apply(context, args)), Number(delay) || 0);
+        const [name, context] = [Symbol.for(toString(timer)), this]; if (def.count[name]) { return }
+        if (immed && def.count[name] !== null) fn.apply(context, args); def.count[name] = rAF.setTimeout(() => ((def.count[name] = null), fn.apply(context, args)), Number(delay) || 0);
       };
     }
 
     function deBounce({ fn, timer, delay, immed = false, once = false }) {
-      if (typeof fn !== "function" || !timer) return () => { };
+      if (typeof fn !== "function" || !timer) { return () => { } }
       return function (...args) {
         const [name, context] = [Symbol.for(toString(timer)), this];
         if (immed === true && typeof def.count[name] === "undefined") {
-          fn.apply(context, args);
-          if (once === true) return (def.count[name] = true);
-        } else if (def.count[name]) {
-          if (def.count[name] === true) return true;
-          rAF.clearTimeout(def.count[name]);
-        }
-        def.count[name] = rAF.setTimeout(() => {
-          fn.apply(context, args);
-          if (once === true) return (def.count[name] = true);
-          delete def.count[name];
-        }, Number(delay) || 0);
+          fn.apply(context, args); if (once === true) return (def.count[name] = true);
+        } else if (def.count[name]) { if (def.count[name] === true) { return true } rAF.clearTimeout(def.count[name]) }
+        def.count[name] = rAF.setTimeout(() => { fn.apply(context, args); if (once === true) return (def.count[name] = true); delete def.count[name] }, Number(delay) || 0);
       };
     }
 
     function safeRemoveNode(expr, scope) {
-      if (!expr) return false;
+      if (!expr) { return false }
       const pendingNodes = safeArray.isArray(expr) ? expr : typeof expr === "string" ? qA(expr, scope) : typeof expr.nodeType === "number" ? [expr] : [];
       return pendingNodes.every(el => el.remove() || el.parentNode === null);
     }
 
     void (async function (tTP, JSON, navigatorInfo) {
-      const [CONFIGURE, VERSION, AUTOCHECK, RESULTFILTER, REMOTEICONS] = ["_configures_", "_version_", "_autoupdate_", "_resultFilter_", "_remoteicons_"];
-      const { engine, creditEngine, brand, source } = (navigatorInfo =
-        JSON.parse(navigatorInfo || null) || (sessionStorage?.setItem(def.static.navinfo, JSON.stringify((navigatorInfo = await getNavigatorInfo()))), navigatorInfo));
-      const [IS_REAL_BLINK, IS_REAL_GECKO] = ["Blink", "Gecko"].map(cE => cE === creditEngine);
-      const IS_CHEAT_UA = source !== "ext" && (engine !== creditEngine || checkBlinkCheatingUA(navigator.userAgentData));
-      const IS_GREASEMONKEY = ["Greasemonkey", "Userscripts", "FireMonkey", "tamp", "OrangeMonkey"].includes(GMscriptHandler);
-      const createNoticeHTML = html => `<div class="${def.notice.rName}"><dl>${html}</dl></div>`;
+      const [CONFIGURE, VERSION, AUTOCHECK, RESULTFILTER, REMOTEICONS] = ["_configures_", "_version_", "_autoupdate_", "_resultFilter_", "_remoteicons_"],
+        { engine, creditEngine, brand, source } = (navigatorInfo =
+          JSON.parse(navigatorInfo || null) || (sessionStorage?.setItem(def.static.navinfo, JSON.stringify((navigatorInfo = await getNavigatorInfo()))), navigatorInfo)),
+        [IS_REAL_BLINK, IS_REAL_GECKO] = ["Blink", "Gecko"].map(cE => cE === creditEngine),
+        IS_CHEAT_UA = source !== "ext" && (engine !== creditEngine || checkBlinkCheatingUA(navigator.userAgentData)),
+        IS_GREASEMONKEY = ["Greasemonkey", "Userscripts", "FireMonkey", "tamp", "OrangeMonkey"].includes(GMscriptHandler),
+        createNoticeHTML = html => `<div class="${def.notice.rName}"><dl>${html}</dl></div>`,
 
-      const cache = {
-        value: (data, eT) => ({ data, expired: Date.now() + (typeof eT === "number" ? eT : 6048e5) }),
-        set: (key, ...options) => GMsetValue(key, encrypt(JSON.stringify(cache.value(...options)))),
-        get: async key => {
-          try {
-            const encryptedValue = await GMgetValue(key);
-            if (!encryptedValue) return;
-            const current = Date.now();
-            const { data, expired } = JSON.parse(decrypt(encryptedValue));
-            return data && expired > current ? data : cache.remove(key);
-          } catch (_) {
-            return cache.remove(key);
-          }
-        },
-        remove: key => GMdeleteValue(key),
-      };
+        cache = {
+          value: (data, eT) => ({ data, expired: Date.now() + (typeof eT === "number" ? eT : 6048e5) }),
+          set: (key, ...options) => GMsetValue(key, encrypt(JSON.stringify(cache.value(...options)))),
+          get: async key => {
+            try {
+              const encryptedValue = await GMgetValue(key); if (!encryptedValue) { return }
+              const current = Date.now(), { data, expired } = JSON.parse(decrypt(encryptedValue));
+              return data && expired > current ? data : cache.remove(key);
+            } catch (_) { return cache.remove(key) }
+          },
+          remove: key => GMdeleteValue(key),
+        };
 
       class NoticeX {
         constructor(options = {}) {
-          const animation = { open: `${def.notice.animated} ${def.notice.random}_fadeIn`, close: `${def.notice.animated} ${def.notice.random}_fadeOut` };
-          const callbacks = { beforeShow: [], onShow: [], afterShow: [], beforeClose: [], onClose: [], afterClose: [], onClick: [], onHover: [] };
+          const animation = { open: `${def.notice.animated} ${def.notice.random}_fadeIn`, close: `${def.notice.animated} ${def.notice.random}_fadeOut` },
+            callbacks = { beforeShow: [], onShow: [], afterShow: [], beforeClose: [], onClose: [], afterClose: [], onClick: [], onHover: [] };
           this.options = { title: "", text: "", type: def.notice.success, position: "bottomRight", newestOnTop: false, timeout: 2e3, progressBar: true };
           safeObject.assign(this.options, { closeWith: ["button"], animation, width: 400, scroll: { maxHeight: 400, showOnHover: false }, callbacks, ...options });
         }
         static close(item) {
-          if (!item) return true;
-          item.classList.add(def.notice.animated, `${def.notice.random}_fadeOut`);
-          const closetNode = item.closest(`.${def.notice.noticeX}`);
-          const position = closetNode?.className.match(/\b(\w+-\w+)\b/)?.[1] || `${def.notice.noticeX}-topRight`;
+          if (!item) { return true } item.classList.add(def.notice.animated, `${def.notice.random}_fadeOut`);
+          const closetNode = item.closest(`.${def.notice.noticeX}`), position = closetNode?.className.match(/\b(\w+-\w+)\b/)?.[1] || `${def.notice.noticeX}-topRight`;
           return sleep(3e2).then(() => safeRemoveNode(item) && !qA(`.${position} .${def.notice.item}`).length && safeRemoveNode(`.${position}`));
         }
         show() {
           return this._createContainer(), this._appendNoticeX(this._createHeader(), this._createBody(), this._createProgressBar());
         }
         _createContainer() {
-          const position = `${def.notice.noticeX}-${this.options.position}`;
-          if (qS(`gb-notice.${position}`)) return;
-          const container = cE("gb-notice", { class: [def.notice.noticeX, position, def.notice.appear] });
-          document.documentElement?.appendChild(container);
+          const position = `${def.notice.noticeX}-${this.options.position}`; if (qS(`gb-notice.${position}`)) { return }
+          const container = cE("gb-notice", { class: [def.notice.noticeX, position, def.notice.appear] }); document.documentElement?.appendChild(container);
         }
         _createHeader() {
-          if (!this.options.title && !this.options.closeWith.includes("button")) return null;
-          const header = cE("div", { class: `${def.notice.noticeX}-heading` });
+          if (!this.options.title && !this.options.closeWith.includes("button")) { return null } const header = cE("div", { class: `${def.notice.noticeX}-heading` });
           if (this.options.title) header.innerHTML += tTP.createHTML(`<span class="${def.notice.noticeX}-heading-title" title="${this.options.title}">${this.options.title}</span>`);
-          if (this.options.closeWith.includes("button")) header.appendChild(cE("div", { class: def.notice.close, innerHTML: tTP.createHTML("&times;") }));
-          return header;
+          if (this.options.closeWith.includes("button")) header.appendChild(cE("div", { class: def.notice.close, innerHTML: tTP.createHTML("&times;") })); return header;
         }
         _createBody() {
-          const body = cE("div", { class: `${def.notice.noticeX}-body` });
-          const content = cE("div", { class: `${def.notice.noticeX}-content`, innerHTML: tTP.createHTML(this.options.text) });
-          body.appendChild(content);
+          const body = cE("div", { class: `${def.notice.noticeX}-body` }),
+            content = cE("div", { class: `${def.notice.noticeX}-content`, innerHTML: tTP.createHTML(this.options.text) }); body.appendChild(content);
           if (this.options.scroll.maxHeight) {
             body.style.cssText += `overflow-y:auto;max-height:min(calc(92vh - 50px), ${this.options.scroll.maxHeight}px)`;
             if (this.options.scroll.showOnHover) body.style.visibility = "hidden";
-          }
-          return body;
+          } return body;
         }
         _createProgressBar() {
-          const progressBar = cE("div", { class: `${def.notice.noticeX}-progressbar` });
-          const bar = cE("div", { class: `${def.notice.noticeX}-bar` });
+          const progressBar = cE("div", { class: `${def.notice.noticeX}-progressbar` }), bar = cE("div", { class: `${def.notice.noticeX}-bar` });
           progressBar.appendChild(bar);
           if (this.options.progressBar && typeof this.options.timeout === "number") {
             progressBar.style.animation = `${def.notice.noticeX}-progress ${this.options.timeout / 1e3}s linear forwards`;
             sleep(this.options.timeout).then(item => (item = progressBar.closest(`div.${def.notice.item}`)) && this._closeWithAnimation(item));
-          }
-          return progressBar;
+          } return progressBar;
         }
         _appendNoticeX(header, body, progressBar) {
-          const target = qS(`.${def.notice.noticeX}-${this.options.position}`);
-          const noticeItem = cE("div", { class: [def.notice.item, this.options.type] });
+          const target = qS(`.${def.notice.noticeX}-${this.options.position}`), noticeItem = cE("div", { class: [def.notice.item, this.options.type] });
           if (this.options.width && Number.isInteger(this.options.width)) noticeItem.style.width = `${this.options.width}px`;
           [header, body, progressBar].forEach(el => el && noticeItem.appendChild(el));
           if (["top", "bottom"].includes(this.options.position)) target.textContent = "";
           if (this.options.animation.open) noticeItem.className += ` ${this.options.animation.open}`;
-          this._executeCallbacks("beforeShow");
-          this._addListeners(noticeItem);
-          this._executeCallbacks("onShow");
+          this._executeCallbacks("beforeShow"); this._addListeners(noticeItem); this._executeCallbacks("onShow");
           this.options.newestOnTop ? target.insertAdjacentElement("afterbegin", noticeItem) : target.appendChild(noticeItem);
-          this._executeCallbacks("afterShow");
-          return noticeItem;
+          this._executeCallbacks("afterShow"); return noticeItem;
         }
         _closeWithAnimation(item) {
           if (this.options.animation?.close) sleep(5e2)((item.className += ` ${this.options.animation.close}`)).then(() => this._closeItem(item));
@@ -894,8 +826,7 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
       }
 
       function checkBlinkCheatingUA(uad) {
-        if (!IS_REAL_BLINK) return false;
-        return (global.isSecureContext && !uad) || (uad && toString(uad) !== "[object NavigatorUAData]");
+        if (!IS_REAL_BLINK) { return false } return (global.isSecureContext && !uad) || (uad && toString(uad) !== "[object NavigatorUAData]");
       }
 
       function insertAfter(newNode, target) {
@@ -903,10 +834,8 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
       }
 
       function getSheetMetadata(sheet) {
-        const rootRule = sheet.cssRules[0];
-        if (!rootRule || rootRule.selectorText !== ":host(sheet-metadata)") return object();
-        const rawValue = rootRule.style.getPropertyValue("--sheet-metadata");
-        return rawValue ? JSON.parse(rawValue.trim()) : object();
+        const rootRule = sheet.cssRules[0]; if (!rootRule || rootRule.selectorText !== ":host(sheet-metadata)") return object();
+        const rawValue = rootRule.style.getPropertyValue("--sheet-metadata"); return rawValue ? JSON.parse(rawValue.trim()) : object();
       }
 
       function createStyleSheet(id, css, primary, sheet) {
@@ -918,12 +847,12 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
         const isShadowRoot = target instanceof ShadowRoot;
         try {
           if (typeof target.adoptedStyleSheets?.push !== "function") throw new Error("use inlineStyle");
-          if (asArray(target.adoptedStyleSheets).SomeX(sheet => getSheetMetadata(sheet).id === id)) return true;
+          if (asArray(target.adoptedStyleSheets).SomeX(sheet => getSheetMetadata(sheet).id === id)) { return true }
           return target.adoptedStyleSheets.push(createStyleSheet(id, css, !isShadowRoot, null)) && true;
         } catch (error) {
           try {
             target = isShadowRoot ? target : target.head;
-            if (qS(`style#${id}`, target)) return true;
+            if (qS(`style#${id}`, target)) { return true }
             const option = { id, media: "all", type: "text/css", textContent: css, ...(!isShadowRoot && { [def.const.cssAttrName]: false }) };
             if (typeof GM_addElement !== "undefined") return GM_addElement(target, "style", option) && true;
             return target.appendChild(cE("style", option)) && true;
@@ -940,35 +869,21 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
       function getUrlParam(parameter) {
         try {
           switch (oS.call(parameter)) {
-            case "[object Object]": {
-              const { split, index } = parameter;
-              const keyArray = global.location.pathname.split(split);
-              return keyArray[index] ?? "";
-            }
-            case "[object Array]":
-              for (const para of parameter) {
-                const value = getUrlParam(para);
-                if (value) return value;
-              }
-              return "";
+            case "[object Object]": { const { split, index } = parameter, keyArray = global.location.pathname.split(split); return keyArray[index] ?? "" }
+            case "[object Array]": { for (const para of parameter) { const value = getUrlParam(para); if (value) { return value } } return "" }
             case "[object Number]":
             case "[object String]":
-              if (!parameter && parameter !== 0) return "";
-              return new URLSearchParams(global.location.search).get(parameter) ?? "";
-            case "[object Function]":
-              return parameter() ?? "";
-            default:
-              return "";
+              if (!parameter && parameter !== 0) { return "" } return new URLSearchParams(global.location.search).get(parameter) ?? "";
+            case "[object Function]": return parameter() ?? "";
+            default: return "";
           }
-        } catch (e) {
-          return ERROR(`${e.name} in GetUrlParam:`, e.message) ?? "";
-        }
+        } catch (e) { return ERROR(`${e.name} in GetUrlParam:`, e.message) ?? "" }
       }
 
       function versionCompare(current, compare) {
         const [currentVersion, compareVersion] = [current.split(".").map(Number), compare.split(".").map(Number)];
-        if (compareVersion.length !== currentVersion.length) return true;
-        for (let i = 0; i < currentVersion.length; i++) if (compareVersion[i] !== currentVersion[i]) return compareVersion[i] > currentVersion[i];
+        if (compareVersion.length !== currentVersion.length) { return true }
+        for (let i = 0; i < currentVersion.length; i++) { if (compareVersion[i] !== currentVersion[i]) { return compareVersion[i] > currentVersion[i] } }
         return false;
       }
 
@@ -976,41 +891,34 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
         return {
           getItem: sKey => decodeURIComponent(document.cookie.replace(new RegExp("(?:(?:^|.*;)\\s*" + sKey?.replace(/[-.+*]/g, "\\$&") + "\\s*\\=\\s*([^;]*).*$)|^.*$"), "$1")) || null,
           setItem: function ({ sKey, sValue, sEnd, sPath, sDomain, sSameSite, sSecure }) {
-            if (!sKey || /^(?:expires|max-age|path|domain|samesite|secure)$/i.test(sKey)) return false;
+            if (!sKey || /^(?:expires|max-age|path|domain|samesite|secure)$/i.test(sKey)) { return false }
             [sDomain, sPath, sSameSite, sSecure] = [sDomain ? `;domain=${sDomain}` : "", sPath ? `;path=${sPath}` : "", sSameSite ? `;SameSite=${sSameSite}` : "", sSecure ? ";secure" : ""];
             const sExpires = typeof sEnd === "number" ? `;expires=${new Date(Date.now() + sEnd * 24 * 60 * 60 * 1000).toUTCString()}` : `;expires=Sat, 23 Oct 2099 13:31:44 GMT`;
-            document.cookie = `${sKey}=${sValue}${sExpires}${sDomain}${sPath}${sSameSite}${sSecure}`;
-            return true;
+            document.cookie = `${sKey}=${sValue}${sExpires}${sDomain}${sPath}${sSameSite}${sSecure}`; return true;
           },
           removeItem: function ({ sKey, sPath, sDomain }) {
-            if (!sKey || !new RegExp("(?:^|;\\s*)" + sKey.replace(/[-.+*]/g, "\\$&") + "\\s*\\=").test(document.cookie)) return false;
-            document.cookie = `${sKey}=;expires=Thu, 01 Jan 1970 00:00:00 GMT${sDomain ? `;domain=${sDomain}` : ""}${sPath ? `;path=${sPath}` : ""}`;
-            return true;
+            if (!sKey || !new RegExp("(?:^|;\\s*)" + sKey.replace(/[-.+*]/g, "\\$&") + "\\s*\\=").test(document.cookie)) { return false }
+            document.cookie = `${sKey}=;expires=Thu, 01 Jan 1970 00:00:00 GMT${sDomain ? `;domain=${sDomain}` : ""}${sPath ? `;path=${sPath}` : ""}`; return true;
           },
         };
       }
 
       void (async function (getConfigureData, getResultFilterData, requestRemoteIcon, GMnotification, computStyle) {
         let [_config_date_, { trigger: antiResultsFilter, filter: resultFilters }] = await Promise.all([getConfigureData(), getResultFilterData()]);
-        const { isAutoUpdate, keywordHighlight, isHotkey, selectedEngine, localWindow, googleJump, antiLinkRedirect, antiAds, customColor } = _config_date_;
-        const [gbCookies, cachedRequestLinks, usedFilterWords, TIMEOUT, httpRegex, selectedSite] = [manageCookies(), new Map(), new Set(), 2e4, /^http:\/\//i, []];
+        const { isAutoUpdate, keywordHighlight, isHotkey, selectedEngine, localWindow, googleJump, antiLinkRedirect, antiAds, customColor } = _config_date_,
+          [gbCookies, cachedRequestLinks, usedFilterWords, TIMEOUT, httpRegex, selectedSite] = [manageCookies(), new Map(), new Set(), 2e4, /^http:\/\//i, []];
 
         /* ANTIREDIRECT_FUNCTIONS */
 
         function validateOptions(options) {
           return {
-            useNewTab: options.useNewTab || false,
-            forceSelf: options.forceSelf || false,
-            forceNewTab: options.forceNewTab || false,
-            cleanAttr: options.cleanAttr || [],
-            removeDataSet: options.removeDataSet || false,
-            advancedAnti: options.advancedAnti || false,
+            useNewTab: options.useNewTab || false, forceSelf: options.forceSelf || false, forceNewTab: options.forceNewTab || false,
+            cleanAttr: options.cleanAttr || [], removeDataSet: options.removeDataSet || false, advancedAnti: options.advancedAnti || false,
           };
         }
 
         function updateNodeAttributes(options, node, result = 0) {
-          if (options.useNewTab && ++result) node.setAttribute("target", "_blank");
-          if (options.forceSelf && ++result) node.setAttribute("target", "_self");
+          if (options.useNewTab && ++result) node.setAttribute("target", "_blank"); if (options.forceSelf && ++result) node.setAttribute("target", "_self");
           if (safeArray.isArray(options.cleanAttr) && options.cleanAttr.length > 0 && ++result) options.cleanAttr.forEach(item => node.removeAttribute(item));
           if (options.removeDataSet && ++result) safeObject.keys(node.dataset).forEach(ds => delete node.dataset[ds]);
           if (options.forceNewTab && ++result) node.addEventListener("click", e => forceNewTabAction(e, node));
@@ -1023,12 +931,7 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
         }
 
         function stopEventPropagation(event, { prevent = true } = {}) {
-          if (prevent) event.preventDefault();
-          try {
-            def.const.stopImmediatePropagation.call(event);
-          } catch (_) {
-            event.stopImmediatePropagation();
-          }
+          if (prevent) event.preventDefault(); try { def.const.stopImmediatePropagation.call(event) } catch (_) { event.stopImmediatePropagation() }
         }
 
         function getRealHref(node) {
@@ -1037,46 +940,36 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
         }
 
         function setAdvancedAntiRedirect(node, tasks, siteName) {
-          node.setAttribute(def.static.anti, "pending");
-          const task = advancedAntiRedirection(siteName, node, () => Promise.resolve(NaN));
+          node.setAttribute(def.static.anti, "pending"); const task = advancedAntiRedirection(siteName, node, () => Promise.resolve(NaN));
           if (typeof task === "function") tasks.push(task);
         }
 
         async function parsingAntiRedirect(siteName, selectors, options) {
-          if (typeof selectors !== "string" || !selectors.trim()) return;
-          const config = validateOptions(options);
-          const selectorArray = selectors.split(/,(?![^()]*\))/g);
-          const query = selectorArray.map(s => `${s.trim()}:not([href^='javascript:' i]):not([href^='#']):not([${def.static.anti}])`).join(",");
-          const nodes = qA(query);
-          if (nodes.length === 0) return;
-          const targetNodes = nodes.filter(node => {
+          if (typeof selectors !== "string" || !selectors.trim()) { return }
+          const config = validateOptions(options), selectorArray = selectors.split(/,(?![^()]*\))/g),
+            query = selectorArray.map(s => `${s.trim()}:not([href^='javascript:' i]):not([href^='#']):not([${def.static.anti}])`).join(","), nodes = qA(query);
+          if (nodes.length === 0) { return } const targetNodes = nodes.filter(node => {
             if (shouldResetPurge(node, config, def.static.purge)) node.removeAttribute(def.static.purge);
             return !node.hasAttribute(def.static.purge);
           });
-          if (targetNodes.length === 0) return;
-          COUNT(`[${siteName}-Anti-Redirect]`);
-          const taskList = [];
-          for (const node of targetNodes) {
-            updateNodeAttributes(config, node);
-            if (config.advancedAnti) setAdvancedAntiRedirect(node, taskList, siteName);
-          }
-          if (taskList.length === 0) return;
-          const results = await parallelTasks(taskList, 10);
+          if (targetNodes.length === 0) { return } COUNT(`[${siteName}-Anti-Redirect]`); const taskList = [];
+          for (const node of targetNodes) { updateNodeAttributes(config, node); if (config.advancedAnti) setAdvancedAntiRedirect(node, taskList, siteName); }
+          if (taskList.length === 0) { return } const results = await parallelTasks(taskList, 10);
           deBounce({ fn: handlePageCheck, delay: 1e3, timer: "doTask" })(results[results.length - 1]);
         }
 
         function shouldResetPurge(node, options, purgeAttr) {
-          if (!node.hasAttribute(purgeAttr)) return false;
-          const hasNewTabMismatch = options.useNewTab && node.target !== "_blank";
-          const hasForceSelfMismatch = options.forceSelf && node.target !== "_self";
-          const hasDirtyAttr = Array.isArray(options.cleanAttr) && options.cleanAttr.some(attr => node.hasAttribute(attr));
-          const hasDataSet = options.removeDataSet && Object.keys(node.dataset).length > 0;
+          if (!node.hasAttribute(purgeAttr)) { return false }
+          const hasNewTabMismatch = options.useNewTab && node.target !== "_blank",
+            hasForceSelfMismatch = options.forceSelf && node.target !== "_self",
+            hasDirtyAttr = Array.isArray(options.cleanAttr) && options.cleanAttr.some(attr => node.hasAttribute(attr)),
+            hasDataSet = options.removeDataSet && Object.keys(node.dataset).length > 0;
           return hasNewTabMismatch || hasForceSelfMismatch || hasDirtyAttr || hasDataSet;
         }
 
         function fetchData(url, resolve, reject, readystate, error, timeout) {
-          const headers = { Accept: "*/*", Referer: global.location.origin.replace(httpRegex, "https://") };
-          const onEvents = { onload: readystate(resolve, reject), onerror: error(reject, resolve), ontimeout: timeout(reject) };
+          const headers = { Accept: "*/*", Referer: global.location.origin.replace(httpRegex, "https://") },
+            onEvents = { onload: readystate(resolve, reject), onerror: error(reject, resolve), ontimeout: timeout(reject) };
           GMxmlhttpRequest({ url, headers, method: "GET", fetch: true, timeout: TIMEOUT, ...onEvents });
         }
 
@@ -1084,48 +977,32 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
           try {
             const res = await new Promise((resolve, reject) => {
               if (!cachedRequestLinks.has(url)) {
-                cachedRequestLinks.set(url, null);
-                fetchData(url, resolve, reject, onloadFunc, onerrorFunc, ontimeoutFunc);
+                cachedRequestLinks.set(url, null); fetchData(url, resolve, reject, onloadFunc, onerrorFunc, ontimeoutFunc);
               } else reject(new RangeError("DuplicateLinksError"));
-            });
-            return handleSuccess(res, url, node);
-          } catch (e) {
-            return handleError(e, url, node, name);
-          }
+            }); return handleSuccess(res, url, node);
+          } catch (e) { return handleError(e, url, node, name) }
         }
 
         function handleSuccess(res, url, node) {
-          antiResultsFilter &&
-            asArray(resultFilters).SomeX(filter => new RegExp(filter, "i").test(res)) &&
+          antiResultsFilter && asArray(resultFilters).SomeX(filter => new RegExp(filter, "i").test(res)) &&
             node.insertAdjacentHTML("beforeend", tTP.createHTML(`<div class="${def.const.filtered}">${res}</div>`));
-          cachedRequestLinks.set(url, res);
-          setRealLink(node, res);
-          toggleLoadClass(node)?.remove();
-          DEBUG("Parsed link:", { node, parsed: res, origin: url });
+          cachedRequestLinks.set(url, res); setRealLink(node, res); toggleLoadClass(node)?.remove(); DEBUG("Parsed link:", { node, parsed: res, origin: url });
         }
 
         function handleError(e, url, node, name) {
           if (["URLBrokenError", "TimeoutError", "URLNotExistError", "PermissionDenied", "ResponseError"].includes(e?.message)) cachedRequestLinks.set(url, url);
           if (e?.message === "DuplicateLinksError") handleDuplicateLinksError(url, node);
           else {
-            setErrorLink(node);
-            toggleLoadClass(node)?.remove();
+            setErrorLink(node); toggleLoadClass(node)?.remove();
             ERROR(`${e.name} in AntiRedirect_%s: %s %O`, name, e?.message, { Node: node, Text: node.textContent, URL: node.href });
           }
         }
 
         function handleDuplicateLinksError(url, node) {
-          def.count.duplicate++;
-          const startTime = Date.now();
-          const attemptToFindCacheLink = rAF.setInterval(() => {
-            const cachedRealLinks = cachedRequestLinks.get(url);
-            const isTimeout = Date.now() - startTime > TIMEOUT;
-            if (!cachedRealLinks && !isTimeout) return;
-            rAF.clearInterval(attemptToFindCacheLink);
-            def.count.duplicate--;
-            toggleLoadClass(node)?.remove();
-            if (cachedRealLinks && cachedRealLinks !== url) return DEBUG("Duplicate link:", { node, url: cachedRealLinks }), setRealLink(node, cachedRealLinks);
-            setErrorLink(node);
+          def.count.duplicate++; const startTime = Date.now(), attemptToFindCacheLink = rAF.setInterval(() => {
+            const cachedRealLinks = cachedRequestLinks.get(url), isTimeout = Date.now() - startTime > TIMEOUT;
+            if (!cachedRealLinks && !isTimeout) { return } rAF.clearInterval(attemptToFindCacheLink); def.count.duplicate--; toggleLoadClass(node)?.remove();
+            if (cachedRealLinks && cachedRealLinks !== url) return DEBUG("Duplicate link:", { node, url: cachedRealLinks }), setRealLink(node, cachedRealLinks); setErrorLink(node);
           }, 2e2);
         }
 
@@ -1139,18 +1016,15 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
         }
 
         function setRealLink(node, url) {
-          node.href = url;
-          if (CUR_HOST_NAME.endsWith(".bing.com")) {
+          node.href = url; if (CUR_HOST_NAME.endsWith(".bing.com")) {
             const actions = ["mouseenter", "mouseleave", "mouseout", "mousedown", "mouseup", "blur", "keyup"];
             !global[def.const.bing] && actions.forEach(act => document.addEventListener(act, handleBingLink, (global[def.const.bing] = true)));
             node.setAttribute("gb-real-href", `\x61\x30${encrypt(url)}\x3d`);
-          }
-          node.setAttribute(def.static.anti, "success");
+          } node.setAttribute(def.static.anti, "success");
         }
 
         function setErrorLink(node) {
-          node.classList.add(def.notice.linkerror);
-          node.setAttribute(def.static.anti, "failed");
+          node.classList.add(def.notice.linkerror); node.setAttribute(def.static.anti, "failed");
           node.setAttribute("title", `${IS_CHN ? "此链接可能不再可用，您仍可尝试访问它。" : "This link may no longer be available, you can still try to access it."}`);
         }
 
@@ -1161,22 +1035,10 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
         }
 
         async function parallelTasks(tasks, maxCount = 3) {
-          const results = [];
-          const taskLength = tasks.length;
-          if (taskLength === 0) return results;
-          let currentIndex = 0;
-          const executor = async () => {
-            while (currentIndex < taskLength) {
-              const index = currentIndex++;
-              const task = tasks[index];
-              results[index] = await task();
-            }
-          };
-          const workers = [];
-          const initialCount = Math.min(maxCount, taskLength);
-          for (let i = 0; i < initialCount; i++) workers.push(executor());
-          await Promise.all(workers);
-          return results;
+          const results = [], taskLength = tasks.length; if (taskLength === 0) { return results } let currentIndex = 0;
+          const executor = async () => { while (currentIndex < taskLength) { const index = currentIndex++, task = tasks[index]; results[index] = await task() } },
+            workers = [], initialCount = Math.min(maxCount, taskLength); for (let i = 0; i < initialCount; i++) workers.push(executor());
+          await Promise.all(workers); return results;
         }
 
         function reportIDMHijacking() {
@@ -1189,16 +1051,14 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
         function rejectResponse(response, resolve, reject, url) {
           const resUrl = response.responseHeaders?.match(/Location:\s*([\S]+)/i)?.[1] || response.finalUrl || response.responseURL || url;
           if (/^2\d{2}$/.test(response.status)) {
-            if (response.statusText === "Intercepted by the IDM Advanced Integration") reportIDMHijacking();
-            resolve(resUrl);
-          } else if (response.status !== 0) resUrl === url ? reject(new Error("ResponseError")) : resolve(resUrl);
+            if (response.statusText === "Intercepted by the IDM Advanced Integration") reportIDMHijacking(); resolve(resUrl);
+          } else if (response.status !== 0) { resUrl === url ? reject(new Error("ResponseError")) : resolve(resUrl) }
         }
 
         function getNodeDecodeURI(siteName, url, node) {
           switch (siteName) {
             case "Bing": {
-              const uParam = new URL(url).searchParams.get("u");
-              const u = uParam?.startsWith("a1") ? decrypt(uParam.slice(2).replace(/_/g, "/").replace(/-/g, "+")) : null;
+              const uParam = new URL(url).searchParams.get("u"), u = uParam?.startsWith("a1") ? decrypt(uParam.slice(2).replace(/_/g, "/").replace(/-/g, "+")) : null;
               return !/[\u0080-\u00FF]/g.test(u) && u;
             }
             case "Sogou": {
@@ -1207,43 +1067,32 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
             }
             case "Toutiao": {
               let temp;
-              while ((temp = decodeURIComponent(new URL(url).searchParams.get("url") ?? ""))) {
-                if (!temp.includes("/search/jump?url=")) break;
-                url = temp;
-              }
+              while ((temp = decodeURIComponent(new URL(url).searchParams.get("url") ?? ""))) { if (!temp.includes("/search/jump?url=")) break; url = temp }
               return temp || node.href;
             }
-            case "Yahoo":
-              return decodeURIComponent(url.match(/(\/RU|&rurl|&imgurl)=([^/&]+)(\/|&)/)?.[2] ?? "") || node.href;
-            default:
-              return;
+            case "Yahoo": return decodeURIComponent(url.match(/(\/RU|&rurl|&imgurl)=([^/&]+)(\/|&)/)?.[2] ?? "") || node.href;
+            default: return;
           }
         }
 
         function getNoneXHRDecodeURI(url, node, siteName, decodeUrl) {
           try {
             if (cachedRequestLinks.has(url)) throw new RangeError("DuplicateLinksError");
-            cachedRequestLinks.set(url, null);
-            const res = decodeUrl || url;
-            return handleSuccess(res, url, node);
-          } catch (e) {
-            return handleError(e, url, node, siteName);
-          }
+            cachedRequestLinks.set(url, null); const res = decodeUrl || url; return handleSuccess(res, url, node);
+          } catch (e) { return handleError(e, url, node, siteName) }
         }
 
         function getXHRDecodeURI(url, node, siteName) {
           return getRealUrl(url, node, siteName, {
             onloadFunc: (resolve, reject) => response => {
-              if (response.readyState !== 4) return;
+              if (response.readyState !== 4) { return }
               if (response.status === 200) {
                 let resUrl = response.finalUrl || response.responseURL || url;
                 if (resUrl === url) {
-                  const resText = response.responseText || response.response || "";
-                  const res = resText.match(/URL\s*=\s*'([^']+)'/) || resText.match(/var\s+u\s*=\s*"([^"]+)"\s*;\s*\r\n/i) || response.responseHeaders?.match(/Location:\s*([\S]+)/i);
-                  if (res) resUrl = res[1];
-                  else reject(new Error("URLNotExistError"));
-                }
-                resolve(resUrl);
+                  const resText = response.responseText || response.response || "",
+                    res = resText.match(/URL\s*=\s*'([^']+)'/) || resText.match(/var\s+u\s*=\s*"([^"]+)"\s*;\s*\r\n/i) || response.responseHeaders?.match(/Location:\s*([\S]+)/i);
+                  if (res) { resUrl = res[1] } else { reject(new Error("URLNotExistError")) }
+                } resolve(resUrl);
               } else rejectResponse(response, resolve, reject, url);
             },
             onerrorFunc: (reject, resolve) => e => {
@@ -1253,8 +1102,7 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
                 resolve(realUrl);
               } else {
                 const res = e.responseHeaders?.match(/Location:\s*([\S]+)/i);
-                if (res?.[1] && res[1] !== e.finalUrl) resolve(res[1]);
-                reject(new Error("URLBrokenError"));
+                if (res?.[1] && res[1] !== e.finalUrl) resolve(res[1]); reject(new Error("URLBrokenError"));
               }
             },
             ontimeoutFunc: reject => () => reject(new Error("TimeoutError")),
@@ -1262,9 +1110,7 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
         }
 
         function advancedAntiRedirection(siteName, node, task) {
-          if (!node?.href) return;
-          const url = node.href.replace(httpRegex, "https://");
-          toggleLoadClass(node)?.add();
+          if (!node?.href) { return } const url = node.href.replace(httpRegex, "https://"); toggleLoadClass(node)?.add();
           switch (siteName) {
             case "Baidu":
               return () => getXHRDecodeURI(url, node, siteName);
@@ -1286,35 +1132,28 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
         const siteAdblockHandlers = {
           Bing: (siteName, clean) => {
             qA(`:is(#b_results,#b_context,#b_topw)>li:not(.${def.const.disappear})`).forEach(node => {
-              const adv = qS("div.b_caption>p[class]", node);
-              const adg = adv && computStyle(adv, ":before");
+              const adv = qS("div.b_caption>p[class]", node), adg = adv && computStyle(adv, ":before");
               if (adg && adg.display === "inline-block" && adg.verticalAlign !== "middle") {
-                COUNT(`[${siteName}-Anti-Ads-Deep-exp]`);
-                node.classList.add(def.const.disappear);
-                clean === true && safeRemoveNode(node);
+                COUNT(`[${siteName}-Anti-Ads-Deep-exp]`); node.classList.add(def.const.disappear); clean === true && safeRemoveNode(node);
               }
             });
           },
           Yandex: (siteName, clean) => {
             qS(`div.DistributionPopup_location_right-top.DistributionPopup_visible>button.Button.DistributionButtonClose_view_cross`)?.click();
-            if (qA(".OrganicHost-Content .OrganicHost-Description>div>span[class$='-Text'],[class*='Organic_with']>[class*='Organic']>span[class$='-Text']").length === 0) return;
+            if (qA(".OrganicHost-Content .OrganicHost-Description>div>span[class$='-Text'],[class*='Organic_with']>[class*='Organic']>span[class$='-Text']").length === 0) { return }
             COUNT(`[${siteName}-Anti-Ads-Deep-exp]`);
             qA("li[data-fast][class]").forEach(node => {
               const adsTxtNode = qS(".OrganicHost-Content .OrganicHost-Description>div>span[class$='-Text'],[class*='Organic_with']>[class*='Organic']>span[class$='-Text']", node);
               if (/^(?:ad|[РекламPeknam]{7})$/i.test(adsTxtNode?.textContent)) {
-                node.classList.add(def.const.disappear);
-                clean === true && safeRemoveNode(node);
+                node.classList.add(def.const.disappear); clean === true && safeRemoveNode(node);
               }
             });
           },
           So360: (siteName, clean) => {
-            if (qA("ul.section>li span.txt>s, ul.result>li>div.res-recommend-tag").length === 0) return;
-            COUNT(`[${siteName}-Anti-Ads-Deep-exp]`);
+            if (qA("ul.section>li span.txt>s, ul.result>li>div.res-recommend-tag").length === 0) { return } COUNT(`[${siteName}-Anti-Ads-Deep-exp]`);
             qA("ul.section>li,ul.result>li").forEach(node => {
-              const ads = qS("span[class='txt']>s", node);
-              if (!ads?.textContent?.includes("\u5e7f\u544a") && !qS("div.res-recommend-tag", node)) return;
-              node.classList.add(def.const.disappear);
-              clean === true && safeRemoveNode(node);
+              const ads = qS("span[class='txt']>s", node); if (!ads?.textContent?.includes("\u5e7f\u544a") && !qS("div.res-recommend-tag", node)) { return }
+              node.classList.add(def.const.disappear); clean === true && safeRemoveNode(node);
             });
           },
           Ecosia: () => qA(`.campaign-counter--banner button[data-test-id="banner-close"],.onboarding-card--visible button[data-test-id="sidebar-card-dismiss"]`).forEach(b => b?.click()),
@@ -1327,18 +1166,12 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
             const cssText = `:root :is(${selectors}){display:none!important;opacity:0!important}`;
             updateAdoptedStyleSheets(document, cssText, def.const.rndadvName) && COUNT(`[${siteName}-Anti-Ads]`);
             isRemoveNodes === true && safeRemoveNode(selectors);
-          }
-          AdvancedAntiAdvertising(siteName, isRemoveNodes);
+          } AdvancedAntiAdvertising(siteName, isRemoveNodes);
         }
 
         function AdvancedAntiAdvertising(siteName, clean) {
-          const AdblockHandler = siteAdblockHandlers[siteName];
-          if (typeof AdblockHandler !== "function") return;
-          try {
-            AdblockHandler.length > 0 ? AdblockHandler(siteName, clean) : AdblockHandler();
-          } catch (e) {
-            ERROR(`${e.name} in AdvancedAntiAdvertising:`, e.message);
-          }
+          const AdblockHandler = siteAdblockHandlers[siteName]; if (typeof AdblockHandler !== "function") { return }
+          try { AdblockHandler.length > 0 ? AdblockHandler(siteName, clean) : AdblockHandler() } catch (e) { ERROR(`${e.name} in AdvancedAntiAdvertising:`, e.message) }
         }
 
         /* PRELOAD_FUNCTIONS */
@@ -1346,35 +1179,28 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
         async function fetchUpdateResponse(url, timeout = 1e4) {
           try {
             return await new Promise((resolve, reject) => {
-              const headers = { Accept: "*/*", Referer: url };
-              const onload = response => {
-                if (response.readyState !== 4) return;
-                if (response.status === 200) resolve({ res: response.responseText || response.response, url });
-                else if (response.status !== 0) reject(new Error("NoAccessError"));
-              };
-              const onerror = () => reject(new Error("NetworkError"));
-              const ontimeout = () => reject(new Error("TimeoutError"));
+              const headers = { Accept: "*/*", Referer: url },
+                onload = response => {
+                  if (response.readyState !== 4) { return }
+                  if (response.status === 200) resolve({ res: response.responseText || response.response, url });
+                  else if (response.status !== 0) reject(new Error("NoAccessError"));
+                },
+                onerror = () => reject(new Error("NetworkError")),
+                ontimeout = () => reject(new Error("TimeoutError"));
               GMxmlhttpRequest({ url, headers, method: "GET", nocache: true, timeout, onload, onerror, ontimeout });
             });
-          } catch (e) {
-            throw new Error(`fetchUpdateResponse: ${e.message}`);
-          }
+          } catch (e) { throw new Error(`fetchUpdateResponse: ${e.message}`) }
         }
 
         async function fetchAndCacheRemoteIcons(remoteURL) {
-          if (!CUR_WINDOW_TOP) return;
-          let iconDataURL = null;
-          try {
+          if (!CUR_WINDOW_TOP) { return } let iconDataURL = null; try {
             const iconBase64Data = await cache.get(REMOTEICONS);
             if (!iconBase64Data || setDebuggerMode()) {
               iconDataURL = DEBUG("%cRequest and initialize remote icon data.", "color:#25f") ?? (await requestRemoteIcon(remoteURL));
               if (!iconDataURL) DEBUG("%cRemote icon data initialized failed.", "color:#ff0000");
               else cache.set(REMOTEICONS, iconDataURL, 2592e6) ?? GMsetValue(VERSION, encrypt(def.var.curVersion)) ?? DEBUG("%cRemote icon data initialized successed.", "color:#006400");
             } else iconDataURL = DEBUG("%cApplied local icon caching data.", "color:#006400") ?? iconBase64Data;
-          } catch (e) {
-            ERROR(`FetchAndCacheRemoteIcons: Can't request the icon data.`, e?.message);
-          }
-          return iconDataURL;
+          } catch (e) { ERROR(`FetchAndCacheRemoteIcons: Can't request the icon data.`, e?.message) } return iconDataURL;
         }
 
         void (async function (getUpdateAddress) {
@@ -1754,75 +1580,51 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
               antiAdsFn: null,
             },
             other: { siteTypeID: 0 },
-          };
+          },
 
-          const newSiteType = {
-            BAIDU: listSite.baidu.siteTypeID,
-            GOOGLE: listSite.google.siteTypeID,
-            BING: listSite.bing.siteTypeID,
-            DUCKDUCKGO: listSite.duckduckgo.siteTypeID,
-            SOGOU: listSite.sogou.siteTypeID,
-            QWANT: listSite.qwant.siteTypeID,
-            YANDEX: listSite.yandex.siteTypeID,
-            SO360: listSite.so360.siteTypeID,
-            TOUTIAO: listSite.toutiao.siteTypeID,
-            KAIFA: listSite.kaifa.siteTypeID,
-            ECOSIA: listSite.ecosia.siteTypeID,
-            YAHOO: listSite.yahoo.siteTypeID,
-            YOU: listSite.you.siteTypeID,
-            STARTPAGE: listSite.startpage.siteTypeID,
-            BRAVE: listSite.brave.siteTypeID,
-            YEP: listSite.yep.siteTypeID,
-            MOJEEK: listSite.mojeek.siteTypeID,
-            SEARXNG: listSite.searxng.siteTypeID,
-            OTHERS: listSite.other.siteTypeID,
-          };
+            newSiteType = {
+              BAIDU: listSite.baidu.siteTypeID, GOOGLE: listSite.google.siteTypeID, BING: listSite.bing.siteTypeID,
+              DUCKDUCKGO: listSite.duckduckgo.siteTypeID, SOGOU: listSite.sogou.siteTypeID, QWANT: listSite.qwant.siteTypeID,
+              YANDEX: listSite.yandex.siteTypeID, SO360: listSite.so360.siteTypeID, TOUTIAO: listSite.toutiao.siteTypeID,
+              KAIFA: listSite.kaifa.siteTypeID, ECOSIA: listSite.ecosia.siteTypeID, YAHOO: listSite.yahoo.siteTypeID,
+              YOU: listSite.you.siteTypeID, STARTPAGE: listSite.startpage.siteTypeID, BRAVE: listSite.brave.siteTypeID,
+              YEP: listSite.yep.siteTypeID, MOJEEK: listSite.mojeek.siteTypeID, SEARXNG: listSite.searxng.siteTypeID,
+              OTHERS: listSite.other.siteTypeID,
+            },
 
-          const engineMap = {
-            "^(w+\\.)?google\\.[a-z.]{2,6}$": { siteType: newSiteType.GOOGLE, site: listSite.google },
-            "kaifa\\.baidu\\.com$": { siteType: newSiteType.KAIFA, site: listSite.kaifa },
-            "\\.baidu\\.com$": { siteType: newSiteType.BAIDU, site: listSite.baidu },
-            "\\.bing\\.com$": { siteType: newSiteType.BING, site: listSite.bing },
-            "duckduckgo\\.com$": { siteType: newSiteType.DUCKDUCKGO, site: listSite.duckduckgo },
-            "\\.sogou\\.com$": { siteType: newSiteType.SOGOU, site: listSite.sogou },
-            "www\\.qwant\\.com$": { siteType: newSiteType.QWANT, site: listSite.qwant },
-            "yandex\\.(com|ru|eu)$": { siteType: newSiteType.YANDEX, site: listSite.yandex },
-            "\\.so\\.com$": { siteType: newSiteType.SO360, site: listSite.so360 },
-            "so\\.toutiao\\.com$": { siteType: newSiteType.TOUTIAO, site: listSite.toutiao },
-            "www\\.ecosia\\.org$": { siteType: newSiteType.ECOSIA, site: listSite.ecosia },
-            "search\\.yahoo\\.com$": { siteType: newSiteType.YAHOO, site: listSite.yahoo },
-            "you\\.com$": { siteType: newSiteType.YOU, site: listSite.you },
-            "startpage\\.com$": { siteType: newSiteType.STARTPAGE, site: listSite.startpage },
-            "search\\.brave\\.com$": { siteType: newSiteType.BRAVE, site: listSite.brave },
-            "yep\\.com$": { siteType: newSiteType.YEP, site: listSite.yep },
-            "www\\.mojeek\\.com$": { siteType: newSiteType.MOJEEK, site: listSite.mojeek },
-            "priv\\.au$": { siteType: newSiteType.SEARXNG, site: listSite.searxng },
-          };
+            engineMap = {
+              "^(w+\\.)?google\\.[a-z.]{2,6}$": { siteType: newSiteType.GOOGLE, site: listSite.google },
+              "kaifa\\.baidu\\.com$": { siteType: newSiteType.KAIFA, site: listSite.kaifa },
+              "\\.baidu\\.com$": { siteType: newSiteType.BAIDU, site: listSite.baidu },
+              "\\.bing\\.com$": { siteType: newSiteType.BING, site: listSite.bing },
+              "duckduckgo\\.com$": { siteType: newSiteType.DUCKDUCKGO, site: listSite.duckduckgo },
+              "\\.sogou\\.com$": { siteType: newSiteType.SOGOU, site: listSite.sogou },
+              "www\\.qwant\\.com$": { siteType: newSiteType.QWANT, site: listSite.qwant },
+              "yandex\\.(com|ru|eu)$": { siteType: newSiteType.YANDEX, site: listSite.yandex },
+              "\\.so\\.com$": { siteType: newSiteType.SO360, site: listSite.so360 },
+              "so\\.toutiao\\.com$": { siteType: newSiteType.TOUTIAO, site: listSite.toutiao },
+              "www\\.ecosia\\.org$": { siteType: newSiteType.ECOSIA, site: listSite.ecosia },
+              "search\\.yahoo\\.com$": { siteType: newSiteType.YAHOO, site: listSite.yahoo },
+              "you\\.com$": { siteType: newSiteType.YOU, site: listSite.you },
+              "startpage\\.com$": { siteType: newSiteType.STARTPAGE, site: listSite.startpage },
+              "search\\.brave\\.com$": { siteType: newSiteType.BRAVE, site: listSite.brave },
+              "yep\\.com$": { siteType: newSiteType.YEP, site: listSite.yep },
+              "www\\.mojeek\\.com$": { siteType: newSiteType.MOJEEK, site: listSite.mojeek },
+              "priv\\.au$": { siteType: newSiteType.SEARXNG, site: listSite.searxng },
+            },
 
-          const searchProperties = {
-            inputArray: [
-              'input#kw[name^="w"]',
-              'input[name="q"]:not([type="hidden"])',
-              'input[name="text"][type="text"]',
-              'input#q[name="query"]',
-              'input[name="query"][class$="query"]:not([id*="bottom"])',
-              'input.input-search[type="search"]',
-              'input[type="search"][class*="input"]',
-              '#search-box-container input[class~="ant-input"]',
-              'input#yschsp[name="p"]',
-              'textarea#sb_form_q[name="q"]',
-              'textarea[jsname][name="q"]',
-              "textarea#search-input-textarea",
-            ],
-            searchKeys: ["wd", "word", "query", "q", "text", "keyword", "p"],
-          };
-
-          const { currentSite = {}, listCurrentSite = {} } = findCurrentSite();
-          const { currentSiteName, allSiteURIs } = updateSiteInformation();
-          const { backgroundColor: bgcolor, foregroundColor: fgcolor } = customColor;
-          const updateDetectionAddress = getUpdateAddress();
-          const yandexIconsAPIUrl = `${def.url.yandexIcon}/${allSiteURIs}?size=32&stub=1`;
-          const iconBase64Data = await fetchAndCacheRemoteIcons(yandexIconsAPIUrl);
+            searchProperties = {
+              inputArray: [
+                'input#kw[name^="w"]', 'input[name="q"]:not([type="hidden"])', 'input[name="text"][type="text"]',
+                'input#q[name="query"]', 'input[name="query"][class$="query"]:not([id*="bottom"])', 'input.input-search[type="search"]',
+                'input[type="search"][class*="input"]', '#search-box-container input[class~="ant-input"]', 'input#yschsp[name="p"]',
+                'textarea#sb_form_q[name="q"]', 'textarea[jsname][name="q"]', "textarea#search-input-textarea",
+              ],
+              searchKeys: ["wd", "word", "query", "q", "text", "keyword", "p"],
+            },
+            { currentSite = {}, listCurrentSite = {} } = findCurrentSite(), { currentSiteName, allSiteURIs } = updateSiteInformation(),
+            { backgroundColor: bgcolor, foregroundColor: fgcolor } = customColor, updateDetectionAddress = getUpdateAddress(),
+            yandexIconsAPIUrl = `${def.url.yandexIcon}/${allSiteURIs}?size=32&stub=1`, iconBase64Data = await fetchAndCacheRemoteIcons(yandexIconsAPIUrl);
 
           /* DEFINE_GLOBAL_STYLES */
 
@@ -1852,46 +1654,37 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
 
           function getQueryString() {
             if (currentSite.siteTypeID === newSiteType.YOU) {
-              const textWord = qS(`textarea#search-input-textarea[name='query']`)?.value.trim();
-              if (textWord) return encodeURIComponent(textWord);
-              const keyNodes = qA(`[data-testid^="youchat-question-turn"] span[class^='sc-']`);
-              if (keyNodes.length) return keyNodes[keyNodes.length - 1].textContent;
+              const textWord = qS(`textarea#search-input-textarea[name='query']`)?.value.trim(); if (textWord) return encodeURIComponent(textWord);
+              const keyNodes = qA(`[data-testid^="youchat-question-turn"] span[class^='sc-']`); if (keyNodes.length) return keyNodes[keyNodes.length - 1].textContent;
             }
-            const { inputArray, searchKeys } = searchProperties;
-            const inputValue = qA(inputArray.join()).FindX(item => item.value)?.value;
+            const { inputArray, searchKeys } = searchProperties, inputValue = qA(inputArray.join()).FindX(item => item.value)?.value;
             if (inputValue) return DEBUG("QueryString[INPUT]:", { value: inputValue }), encodeURIComponent(inputValue);
             for (const key of searchKeys) {
-              const queryString = getUrlParam(key);
-              if (!queryString) continue;
-              const decodedValue = queryString.replace(/\+/g, " ");
+              const queryString = getUrlParam(key); if (!queryString) { continue } const decodedValue = queryString.replace(/\+/g, " ");
               return DEBUG("QueryString[URL]:", { queryKey: key, value: decodedValue }), encodeURIComponent(decodedValue);
-            }
-            return "";
+            } return "";
           }
 
           function checkIndexPage() {
-            for (const key of searchProperties.searchKeys) if (getUrlParam(key)) return false;
-            return CUR_PATH_NAME === "/";
+            for (const key of searchProperties.searchKeys) if (getUrlParam(key)) { return false } return CUR_PATH_NAME === "/";
           }
 
           function getSecurityPolicy() {
-            const currentSearchType = getUrlParam(listCurrentSite.splitTypeName);
-            const useSecurityPolicy =
-              (listCurrentSite.siteTypeID === newSiteType.BING && currentSearchType === "maps") ||
-              (listCurrentSite.siteTypeID === newSiteType.GOOGLE && ["26", "28", "50"].includes(currentSearchType)) ||
-              (listCurrentSite.siteTypeID === newSiteType.SOGOU && /^(?:fanyi|hanyu|as)\./.test(CUR_HOST_NAME)) ||
-              (listCurrentSite.siteTypeID === newSiteType.DUCKDUCKGO && getUrlParam("iaxm") === "maps");
+            const currentSearchType = getUrlParam(listCurrentSite.splitTypeName),
+              useSecurityPolicy =
+                (listCurrentSite.siteTypeID === newSiteType.BING && currentSearchType === "maps") ||
+                (listCurrentSite.siteTypeID === newSiteType.GOOGLE && ["26", "28", "50"].includes(currentSearchType)) ||
+                (listCurrentSite.siteTypeID === newSiteType.SOGOU && /^(?:fanyi|hanyu|as)\./.test(CUR_HOST_NAME)) ||
+                (listCurrentSite.siteTypeID === newSiteType.DUCKDUCKGO && getUrlParam("iaxm") === "maps");
             return useSecurityPolicy;
           }
 
           function findCurrentSite() {
             for (const regex of safeObject.keys(engineMap)) {
-              if (!new RegExp(regex).test(CUR_HOST_NAME)) continue;
-              const { siteType, site } = engineMap[regex];
-              const currentSite = selectedEngine.includes(siteType) ? site : listSite.other;
+              if (!new RegExp(regex).test(CUR_HOST_NAME)) { continue }
+              const { siteType, site } = engineMap[regex], currentSite = selectedEngine.includes(siteType) ? site : listSite.other;
               return { currentSite, listCurrentSite: site };
-            }
-            return object();
+            } return object();
           }
 
           function updateSiteInformation(currentSiteName = "", allSiteURIs = "") {
@@ -1901,8 +1694,7 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
               if (listSite[site].siteTypeID !== currentSite.siteTypeID && selectedEngine.includes(Number(listSite[site].siteTypeID))) {
                 selectedSite.length < 2 && selectedSite.push(listSite[site]);
               }
-            }
-            return { currentSiteName, allSiteURIs };
+            } return { currentSiteName, allSiteURIs };
           }
 
           async function updateToRequestIcon() {
@@ -1910,21 +1702,17 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
               const iconDataURL = await requestRemoteIcon(yandexIconsAPIUrl);
               if (iconDataURL) cache.set(REMOTEICONS, iconDataURL, 2592e6) ?? DEBUG("%cRemote icon data parsing successed.", "color:#006400");
               else DEBUG("%cRemote icon data parsing failed.", "color:#ff0000");
-            } catch (e) {
-              ERROR(`${e.name} in UpdateToRequestIcon:`, e.message);
-            }
+            } catch (e) { ERROR(`${e.name} in UpdateToRequestIcon:`, e.message) }
           }
 
           function showUpdateNotification(updateWindow) {
-            const title = IS_CHN ? "升级提示" : "Update Tips";
-            const loadingTip = IS_CHN ? "正在申请脚本更新安装页面，请稍后……" : "Installation page is requested, please wait...";
-            const okTip = IS_CHN ? "<dd><b>若您已完成更新</b>，请点此刷新页面，以使新版脚本生效！</dd>" : "<dd><b>If updated</b>, click here to make the script effective!</dd>";
-            const text = createNoticeHTML(`<dd id="${def.notice.random}_loading" style="color:#ffff00;font-weight:600">${loadingTip}</dd>${okTip}`);
+            const title = IS_CHN ? "升级提示" : "Update Tips", loadingTip = IS_CHN ? "正在申请脚本更新安装页面，请稍后……" : "Installation page is requested, please wait...",
+              okTip = IS_CHN ? "<dd><b>若您已完成更新</b>，请点此刷新页面，以使新版脚本生效！</dd>" : "<dd><b>If updated</b>, click here to make the script effective!</dd>",
+              text = createNoticeHTML(`<dd id="${def.notice.random}_loading" style="color:#ffff00;font-weight:600">${loadingTip}</dd>${okTip}`);
             GMnotification({ title, text, type: def.notice.info, closeWith: ["click"], timeout: false, position: "topRight", callbacks: { onClose: [reload] } });
             const node = qS(`#${def.notice.random}_loading`);
             if (updateWindow && typeof updateWindow.close === "function" && (!IS_REAL_BLINK || GMscriptHandler !== "Violentmonkey")) {
-              sleep(3e3, { useCachedSetTimeout: true }).then(() => updateWindow.close());
-              updateWindow.onclose = () => safeRemoveNode(node);
+              sleep(3e3, { useCachedSetTimeout: true }).then(() => updateWindow.close()); updateWindow.onclose = () => safeRemoveNode(node);
             } else return node;
           }
 
@@ -1948,12 +1736,9 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
             if (!safeArray.isArray(notes) || !notes.length) return `<ol>当前更新源没有更新详情，请访问 <a target="_blank" href="${def.url.homepage}">Github</a> 查看。</ol><ol>&nbsp;</ol>`;
             return notes.reduce((updateInfoList, note) => {
               try {
-                const parsedNote = JSON.parse(note);
-                const updateinfo = IS_CHN ? parsedNote.CN : parsedNote.EN;
+                const parsedNote = JSON.parse(note), updateinfo = IS_CHN ? parsedNote.CN : parsedNote.EN;
                 updateInfoList += updateinfo ? `<li>${updateinfo}</li>` : ``;
-              } catch (_) {
-                updateInfoList += `<li>${note}</li>`;
-              }
+              } catch (_) { updateInfoList += `<li>${note}</li>` }
               return updateInfoList;
             }, "");
           }
@@ -1966,25 +1751,21 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
           }
 
           function showNewUpdateNotify(version, newUpdateHTML, url) {
-            const [title, text, callbacks] = [IS_CHN ? "发现新更新" : "Found new update", createNoticeHTML(newUpdateHTML), { onClick: [() => preInstall(url)] }];
-            const updateInterface = GMnotification({ title, text, type: def.notice.warning, closeWith: ["click"], timeout: 8e3, callbacks });
+            const [title, text, callbacks] = [IS_CHN ? "发现新更新" : "Found new update", createNoticeHTML(newUpdateHTML), { onClick: [() => preInstall(url)] }],
+              updateInterface = GMnotification({ title, text, type: def.notice.warning, closeWith: ["click"], timeout: 8e3, callbacks });
             qS(`#${def.notice.stopUpdate}`)?.addEventListener("click", event => {
-              event.stopPropagation();
-              NoticeX.close(updateInterface);
-              cache.set(AUTOCHECK, def.var.curVersion);
-            });
-            const props = ["font-weight:bold;color:#dc143c", "color:0", "color:#dc143c", "color:0"];
+              event.stopPropagation(); NoticeX.close(updateInterface); cache.set(AUTOCHECK, def.var.curVersion);
+            }); const props = ["font-weight:bold;color:#dc143c", "color:0", "color:#dc143c", "color:0"];
             __console("shown_new_update", `%c[Update Found] %cWe found a new version: %c${version}%c, which you can update now!`, ...props);
           }
 
           function showSuccessUpdateNotify() {
             const successHTML = IS_CHN
               ? `<dd style="margin: 10px 0"><span>恭喜！</span>当前版本 <i>${def.var.curVersion}</i> 已为最新！</dd>`
-              : `<dd style="margin: 10px 0"><span>Congratulations!</span><br/>The version <i>${def.var.curVersion}</i> is up-to-date!</dd>`;
-            const title = IS_CHN ? "更新成功" : "Update Success";
+              : `<dd style="margin: 10px 0"><span>Congratulations!</span><br/>The version <i>${def.var.curVersion}</i> is up-to-date!</dd>`,
+              title = IS_CHN ? "更新成功" : "Update Success";
             GMnotification({ title, text: createNoticeHTML(successHTML), timeout: 3e3, closeWith: ["click"] });
-            cache.set(AUTOCHECK, def.var.curVersion);
-            const props = ["font-weight:700;color:#008b8b", "color:0", "color:#dc143c", "color:0"];
+            cache.set(AUTOCHECK, def.var.curVersion); const props = ["font-weight:700;color:#008b8b", "color:0", "color:#dc143c", "color:0"];
             __console("shown_update_info", `%c[Update Succeed] %cCurretVersion: %c${def.var.curVersion}%c is up-to-date!`, ...props);
           }
 
@@ -1996,11 +1777,10 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
             const addAction = {
               closeConfig: async () => await NoticeX.close(qS(`.${def.notice.noticeX} .${def.notice.configuration}`)),
               listSearchEngine: currentSite => {
-                let returnHtml = "";
-                for (const site of safeObject.keys(listSite)) {
-                  if (listSite[site].siteTypeID === 0 || listSite[site].siteTypeID === currentSite.siteTypeID) continue;
-                  const iconStyle = `background-position:0 ${(1 - listSite[site].siteTypeID) * 32}px;background-attachment:local;background-size:32px auto;transform:scale(0.75);`;
-                  const buttonTitle = selectedEngine.includes(listSite[site].siteTypeID) ? `title="${IS_CHN ? "您常用的搜索引擎" : "Commonly used search engine"}"` : ``;
+                let returnHtml = ""; for (const site of safeObject.keys(listSite)) {
+                  if (listSite[site].siteTypeID === 0 || listSite[site].siteTypeID === currentSite.siteTypeID) { continue }
+                  const iconStyle = `background-position:0 ${(1 - listSite[site].siteTypeID) * 32}px;background-attachment:local;background-size:32px auto;transform:scale(0.75);`,
+                    buttonTitle = selectedEngine.includes(listSite[site].siteTypeID) ? `title="${IS_CHN ? "您常用的搜索引擎" : "Commonly used search engine"}"` : ``;
                   returnHtml += `<li>
                     <button class="${def.notice.searchButton}" id="${listSite[site].siteTypeID}" ${buttonTitle}>
                       <span class="${def.notice.favicon} ${def.notice.random}_icon" style="${iconStyle}"></span>
@@ -2009,15 +1789,13 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
                       </span>
                     </button>
                   </li>`;
-                }
-                return `<ul class="${def.notice.searchList}">${returnHtml}</ul>`;
+                } return `<ul class="${def.notice.searchList}">${returnHtml}</ul>`;
               },
               listSelectSearchEngine: () => {
-                let returnHtml = "";
-                for (const site of safeObject.keys(listSite)) {
-                  if (listSite[site].siteTypeID === 0) continue;
-                  const iconStyle = `background-position:0 ${(1 - listSite[site].siteTypeID) * 32}px;background-attachment:local;background-size:32px auto;`;
-                  const inputStatus = selectedEngine.includes(listSite[site].siteTypeID) ? "checked" : "disabled";
+                let returnHtml = ""; for (const site of safeObject.keys(listSite)) {
+                  if (listSite[site].siteTypeID === 0) { continue }
+                  const iconStyle = `background-position:0 ${(1 - listSite[site].siteTypeID) * 32}px;background-attachment:local;background-size:32px auto;`,
+                    inputStatus = selectedEngine.includes(listSite[site].siteTypeID) ? "checked" : "disabled";
                   returnHtml += `<label class="${def.notice.card}">
                     <input class="${def.notice.card}__input" type="checkbox" name="${def.notice.card}_lists" data-sn="${listSite[site].siteTypeID}" ${inputStatus}/>
                     <div class="${def.notice.card}__body">
@@ -2033,12 +1811,11 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
                       </header>
                     </div>
                   </label>`;
-                }
-                return returnHtml;
+                } return returnHtml;
               },
               setConfigure: () => {
                 sleep(5e2)(addAction.closeConfig()).then(isClosed => {
-                  if (!isClosed) return;
+                  if (!isClosed) { return }
                   const configText = `<fieldset class="${def.notice.fieldset}">
                     <legend class="${def.notice.legend}" title="Version ${def.var.curVersion}">
                       ${IS_CHN ? "高级功能参数设置" : "Advanced Feature Settings"}
@@ -2115,46 +1892,41 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
                         </div>
                       </li>
                     </ul>
-                  </fieldset>`;
-                  const [title, text, type, scroll] = [`${def.var.scriptName} v${def.var.curVersion}`, configText, def.notice.configuration, { maxHeight: 680, showOnHover: true }];
-                  const configInterface = GMnotification({ title, text, type, width: 326, closeWith: ["button"], scroll, progressBar: false, timeout: false, position: "topRight" });
-                  qA(`input[name='${def.notice.card}_lists']`).forEach(node => addCardClickEvent(node));
-                  qS(`#${def.notice.random}_clear`)?.addEventListener("click", cleanSelectedCard);
-                  qS(`#${def.notice.kh}`)?.addEventListener("click", showCustomColor);
-                  qS(`#${def.notice.random}_customColor`)?.addEventListener("click", submitKeywordColor);
-                  qS(`#${def.notice.random}_help`)?.addEventListener("click", openHomePage);
+                  </fieldset>`,
+                    [title, text, type, scroll] = [`${def.var.scriptName} v${def.var.curVersion}`, configText, def.notice.configuration, { maxHeight: 680, showOnHover: true }],
+                    configInterface = GMnotification({ title, text, type, width: 326, closeWith: ["button"], scroll, progressBar: false, timeout: false, position: "topRight" });
+                  qA(`input[name='${def.notice.card}_lists']`).forEach(node => addCardClickEvent(node)); qS(`#${def.notice.random}_clear`)?.addEventListener("click", cleanSelectedCard);
+                  qS(`#${def.notice.kh}`)?.addEventListener("click", showCustomColor); qS(`#${def.notice.random}_customColor`)?.addEventListener("click", submitKeywordColor);
+                  qS(`#${def.notice.random}_help`)?.addEventListener("click", openHomePage); qS(`#${def.notice.random}_submit`)?.addEventListener("click", saveConfigureData);
                   qS(`#${def.notice.random}_cancel`)?.addEventListener("click", () => NoticeX.close(configInterface));
-                  qS(`#${def.notice.random}_submit`)?.addEventListener("click", saveConfigureData);
                   qS(`.${def.notice.noticeX}-heading-title`)?.addEventListener("dblclick", () => {
-                    const newUpdateHTML = `<dd><ul class="${def.notice.random}_updateinfo">${generateUpdateList(extractNotes(GMinfo.scriptMetaStr ?? ""))}</ul></dd>`;
-                    const title = IS_CHN ? `新版本 v${def.var.curVersion} 的更新日志` : `Changelog For v${def.var.curVersion}`;
+                    const newUpdateHTML = `<dd><ul class="${def.notice.random}_updateinfo">${generateUpdateList(extractNotes(GMinfo.scriptMetaStr ?? ""))}</ul></dd>`,
+                      title = IS_CHN ? `新版本 v${def.var.curVersion} 的更新日志` : `Changelog For v${def.var.curVersion}`;
                     GMnotification({ title, text: createNoticeHTML(newUpdateHTML), type: def.notice.info, timeout: 1e4 });
                   });
                 });
               },
               listEngine: () => {
                 sleep(5e2)(addAction.closeConfig()).then(isClosed => {
-                  if (!isClosed) return;
-                  const [title, text] = [`\ud83d\udc4b ${IS_CHN ? "你想去哪里吖？" : "Where to visit?"}`, addAction.listSearchEngine(listCurrentSite)];
-                  const [type, scroll] = [def.notice.configuration, { maxHeight: 565, showOnHover: true }];
+                  if (!isClosed) { return } const [title, text] = [`\ud83d\udc4b ${IS_CHN ? "你想去哪里吖？" : "Where to visit?"}`, addAction.listSearchEngine(listCurrentSite)],
+                    [type, scroll] = [def.notice.configuration, { maxHeight: 565, showOnHover: true }];
                   GMnotification({ title, text, type, width: 200, closeWith: ["button"], scroll, timeout: 12e3, position: "topRight" });
                   qA(`.${def.notice.noticeX} .${def.notice.configuration} .${def.notice.searchButton}`).forEach(item => setupClickEventOnCard(item));
                 });
               },
               filterResult: () => {
                 sleep(5e2)(addAction.closeConfig()).then(async isClosed => {
-                  if (!isClosed) return;
-                  const { trigger: antiResultsFilter, filter: resultFilters } = await getResultFilterData();
-                  const infoText = IS_CHN
-                    ? `设置屏蔽关键词以数组为标准格式，每行一组过滤关键词 (注：关键词中特殊字符须转义并用半角双引号包含，且最末行尾无逗号)，支持正则表达式语法，不区分大小写。推荐您使用关键词添加工具来进行操作。<br/>【<em>单击开启关键词添加工具</em>】`
-                    : `Filter keyword settings use Array as standard format, one filter keyword per line. Supports regular expressions and is not case-sensitive. It is recommended to use adding tool for operation.<br/>[<em>Click to open the keyword adding tool</em>]`;
-                  const placeholder = IS_CHN
-                    ? `设置如下数组格式：\n[\n   "任意关键词",\n   "任意网址但要注意转义",\n   "https?:\\\\/\\\\/www\\\\.test\\\\.cn\\\\/id-\\\\d+",\n   "\\\\(\\\\?=非正则须转义\\\\)",`
-                    : `Set Array as follows: \n[\n   "Any keywords",\n   "Any URLs must be escaped",\n   "https?:\\\\/\\\\/example\\\\.com\\\\/test\\\\.html",\n   "\\\\(\\\\?=Non-regex escaped\\\\)",`;
-                  const placeholderText = placeholder + `\n   "www\\\\.example\\\\.[a-z]{2,3}",\n   "(a|b)\\\\.test\\\\.com",\n   "keyword1|keyword[2345]",\n   "A(?!B)C"\n]`;
-                  const resultFiltersJSON = resultFilters.length ? JSON.stringify(resultFilters, null, "  ") : "";
-                  const legendText = IS_CHN ? "搜索结果屏蔽关键词设置" : "Search Result Filter Setting";
-                  const filterHTML = `<fieldset class="${def.notice.fieldset}">
+                  if (!isClosed) { return } const { trigger: antiResultsFilter, filter: resultFilters } = await getResultFilterData(),
+                    infoText = IS_CHN
+                      ? `设置屏蔽关键词以数组为标准格式，每行一组过滤关键词 (注：关键词中特殊字符须转义并用半角双引号包含，且最末行尾无逗号)，支持正则表达式语法，不区分大小写。推荐您使用关键词添加工具来进行操作。<br/>【<em>单击开启关键词添加工具</em>】`
+                      : `Filter keyword settings use Array as standard format, one filter keyword per line. Supports regular expressions and is not case-sensitive. It is recommended to use adding tool for operation.<br/>[<em>Click to open the keyword adding tool</em>]`,
+                    placeholder = IS_CHN
+                      ? `设置如下数组格式：\n[\n   "任意关键词",\n   "任意网址但要注意转义",\n   "https?:\\\\/\\\\/www\\\\.test\\\\.cn\\\\/id-\\\\d+",\n   "\\\\(\\\\?=非正则须转义\\\\)",`
+                      : `Set Array as follows: \n[\n   "Any keywords",\n   "Any URLs must be escaped",\n   "https?:\\\\/\\\\/example\\\\.com\\\\/test\\\\.html",\n   "\\\\(\\\\?=Non-regex escaped\\\\)",`,
+                    placeholderText = placeholder + `\n   "www\\\\.example\\\\.[a-z]{2,3}",\n   "(a|b)\\\\.test\\\\.com",\n   "keyword1|keyword[2345]",\n   "A(?!B)C"\n]`,
+                    resultFiltersJSON = resultFilters.length ? JSON.stringify(resultFilters, null, "  ") : "",
+                    legendText = IS_CHN ? "搜索结果屏蔽关键词设置" : "Search Result Filter Setting",
+                    filterHTML = `<fieldset class="${def.notice.fieldset}">
                     <legend class="${def.notice.legend}" title="Version ${def.var.curVersion}">${legendText}</legend>
                     <ur class="${def.notice.settingList}">
                       <li>
@@ -2185,26 +1957,23 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
                         </div>
                       </li>
                     </ul>
-                  </fieldset>`;
-                  const [title, text, type, scroll] = [def.var.scriptName + " - " + legendText, filterHTML, def.notice.configuration, { maxHeight: 680, showOnHover: true }];
-                  const filterInterface = GMnotification({ title, text, type, width: 500, closeWith: ["button"], scroll, progressBar: false, timeout: false, position: "topRight" });
-                  const textarea = qS(`.${def.notice.random}_filter_textarea .${def.notice.random}_filter_content`);
-                  const tigger = qS(`#${def.notice.rf}`);
+                  </fieldset>`,
+                    [title, text, type, scroll] = [def.var.scriptName + " - " + legendText, filterHTML, def.notice.configuration, { maxHeight: 680, showOnHover: true }],
+                    filterInterface = GMnotification({ title, text, type, width: 500, closeWith: ["button"], scroll, progressBar: false, timeout: false, position: "topRight" }),
+                    textarea = qS(`.${def.notice.random}_filter_textarea .${def.notice.random}_filter_content`), tigger = qS(`#${def.notice.rf}`);
                   tigger && !tigger.checked && (textarea.classList.add(def.notice.readonly) ?? textarea.setAttribute("readonly", true));
-                  tigger?.addEventListener("change", changeEventOnTigger);
-                  removeKeyboardEvent(textarea);
-                  textarea?.addEventListener("input", addInputEventOnTextarea);
+                  tigger?.addEventListener("change", changeEventOnTigger); removeKeyboardEvent(textarea); textarea?.addEventListener("input", addInputEventOnTextarea);
                   qS(`#${def.notice.random}_help`)?.addEventListener("click", () => GMopenInTab(`${def.url.feedback}/288#discussioncomment-8917302`, false));
                   qS(`#${def.notice.random}_cancel`)?.addEventListener("click", () => NoticeX.close(filterInterface));
                   qS(`#${def.notice.random}_submit`)?.addEventListener("click", saveFilterResultData);
                   qS(`.${def.notice.random}_filter_info>em`)?.addEventListener("click", e => {
-                    if (tigger && !tigger.checked) return alert(IS_CHN ? "请先开启关键词屏蔽开关！" : "Please enable “Keyword Filter Switch” first!");
+                    if (tigger && !tigger.checked) { return alert(IS_CHN ? "请先开启关键词屏蔽开关！" : "Please enable “Keyword Filter Switch” first!") }
                     const errorText = IS_CHN ? "当前过滤规则数据有误，请修正后再使用添加工具！" : "The current filter rules data is incorrect.\nPlease fix it before using the adding tool!";
-                    if (!textarea || e.target.hasAttribute("disabled")) return alert(errorText);
-                    const cnPrompt = `请输入过滤关键词，支持高级正则表达式，多个关键词之间请使用|||分割，例如：关键词㈠|||关键词㈡|||[0-9a-f]*关键词|||\\.example\\.(com|net)|||\\w{1,6}Test[\\d]+`;
-                    const enPrompt = `Please enter filter keywords, support advanced regular expressions, please use ||| to split between multiple keywords, such as: keyword1|||keyword2|||[0-9a-f]*keyword|||\\.example\\.(com|net)|||\\w{1,6}Test[\\d]+`;
-                    const rules = prompt(IS_CHN ? cnPrompt : enPrompt, "");
-                    if (!rules || !rules.trim()) return;
+                    if (!textarea || e.target.hasAttribute("disabled")) { return alert(errorText) }
+                    const cnPrompt = `请输入过滤关键词，支持高级正则表达式，多个关键词之间请使用|||分割，例如：关键词㈠|||关键词㈡|||[0-9a-f]*关键词|||\\.example\\.(com|net)|||\\w{1,6}Test[\\d]+`,
+                      enPrompt = `Please enter filter keywords, support advanced regular expressions, please use ||| to split between multiple keywords, such as: keyword1|||keyword2|||[0-9a-f]*keyword|||\\.example\\.(com|net)|||\\w{1,6}Test[\\d]+`,
+                      rules = prompt(IS_CHN ? cnPrompt : enPrompt, "");
+                    if (!rules || !rules.trim()) { return }
                     textarea.value = JSON.stringify(JSON.parse(textarea.value.trim() || "[]").concat(rules.split("|||").map(s => toString(new RegExp(s)).slice(1, -1))), null, "  ");
                     textarea.scrollTop = textarea.scrollHeight;
                   });
@@ -2214,8 +1983,7 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
 
             function changeEventOnTigger(event) {
               const textarea = qS(`.${def.notice.random}_filter_textarea .${def.notice.random}_filter_content`);
-              textarea?.classList.toggle(def.notice.readonly, !event.target.checked);
-              textarea?.toggleAttribute("readonly", !event.target.checked);
+              textarea?.classList.toggle(def.notice.readonly, !event.target.checked); textarea?.toggleAttribute("readonly", !event.target.checked);
             }
 
             function removeKeyboardEvent(target) {
@@ -2224,58 +1992,40 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
 
             async function saveFilterResultData() {
               try {
-                const filterString = qS(`.${def.notice.random}_filter_textarea .${def.notice.random}_filter_content`)?.value.trim();
-                const filterTrigger = qS(`#${def.notice.rf}`).checked;
-                const parsedFilterString = filterString ? JSON.parse(filterString) : [];
+                const filterString = qS(`.${def.notice.random}_filter_textarea .${def.notice.random}_filter_content`)?.value.trim(),
+                  filterTrigger = qS(`#${def.notice.rf}`).checked, parsedFilterString = filterString ? JSON.parse(filterString) : [];
                 if (!safeArray.isArray(parsedFilterString) || asArray(parsedFilterString).SomeX(item => typeof item !== "string")) throw new Error("Format Error");
                 const resultFilterData = { filter: uniq(parsedFilterString.filter(Boolean)), trigger: filterTrigger };
                 GMsetValue(RESULTFILTER, encrypt(JSON.stringify(resultFilterData)));
-                const successTitle = IS_CHN ? "保存成功！" : "Success!";
-                const successText = IS_CHN ? "<dd>设置参数已成功保存，页面稍后自动刷新！</dd>" : "<dd>The data is saved successfully, Page will refresh!</dd>";
+                const successTitle = IS_CHN ? "保存成功！" : "Success!",
+                  successText = IS_CHN ? "<dd>设置参数已成功保存，页面稍后自动刷新！</dd>" : "<dd>The data is saved successfully, Page will refresh!</dd>";
                 if (await addAction.closeConfig()) GMnotification({ title: successTitle, text: createNoticeHTML(successText), callbacks: { onClose: [reload] } });
               } catch (_) {
-                const errorMessage = IS_CHN ? "设置数据格式有误，请修正后重新提交。" : "The setting data format is incorrect!";
-                const errorText = `<dd><e style="font-size:24px;vertical-align:bottom">\ud83d\ude31\u0020</e>${errorMessage}</dd>`;
+                const errorMessage = IS_CHN ? "设置数据格式有误，请修正后重新提交。" : "The setting data format is incorrect!",
+                  errorText = `<dd><e style="font-size:24px;vertical-align:bottom">\ud83d\ude31\u0020</e>${errorMessage}</dd>`;
                 GMnotification({ text: createNoticeHTML(errorText), type: def.notice.error, newestOnTop: true, closeWith: ["click"] });
               }
             }
 
             async function addInputEventOnTextarea(event) {
-              const target = event.target;
-              const filterInfo = qS(`.${def.notice.random}_filter_info>em`);
+              const target = event.target, filterInfo = qS(`.${def.notice.random}_filter_info>em`);
               try {
-                filterInfo?.removeAttribute("disabled");
-                const value = target.value.trim();
-                if (value.length === 0) return target.setAttribute("style", "border: 1px solid #999");
-                const parsedValue = JSON.parse(value.replace(/,\s+]$/, "]"));
+                filterInfo?.removeAttribute("disabled"); const value = target.value.trim();
+                if (value.length === 0) { return target.setAttribute("style", "border: 1px solid #999") } const parsedValue = JSON.parse(value.replace(/,\s+]$/, "]"));
                 if (!safeArray.isArray(parsedValue) || asArray(parsedValue).SomeX(item => typeof item !== "string")) throw new Error("Format Error");
-                const previousCursorPosition = target.selectionStart;
-                const formattedValue = JSON.stringify(parsedValue, null, 2);
-                const newCursorPosition = previousCursorPosition + formattedValue.length - target.value.length;
-                const currentScrollTop = target.scrollTop;
-                target.value = formattedValue;
-                target.setAttribute("style", "border: 1px solid #999");
-                await sleep(10, { instance: true });
-                target.scrollTop = currentScrollTop;
-                target.setSelectionRange(newCursorPosition, newCursorPosition);
-              } catch (_) {
-                target.setAttribute("style", "border: 2px solid #dc143c");
-                filterInfo?.setAttribute("disabled", "");
-              }
+                const previousCursorPosition = target.selectionStart, formattedValue = JSON.stringify(parsedValue, null, 2),
+                  newCursorPosition = previousCursorPosition + formattedValue.length - target.value.length, currentScrollTop = target.scrollTop;
+                target.value = formattedValue; target.setAttribute("style", "border: 1px solid #999"); await sleep(10, { instance: true });
+                target.scrollTop = currentScrollTop; target.setSelectionRange(newCursorPosition, newCursorPosition);
+              } catch (_) { target.setAttribute("style", "border: 2px solid #dc143c"); filterInfo?.setAttribute("disabled", "") }
             }
 
             function setupClickEventOnCard(item) {
               item?.addEventListener("click", () => {
-                const splitTypeName = getUrlParam(listCurrentSite.splitTypeName).trim();
-                const isImageType = listCurrentSite.imageType.includes(splitTypeName);
+                const splitTypeName = getUrlParam(listCurrentSite.splitTypeName).trim(), isImageType = listCurrentSite.imageType.includes(splitTypeName);
                 for (const [type, typeID] of safeObject.entries(newSiteType)) {
-                  if (typeID !== Number(item.id)) continue;
-                  const siteType = type.toLowerCase();
-                  const url = isImageType ? listSite[siteType].imageURL : listSite[siteType].webURL;
-                  const fullURL = decodeURI(url + getQueryString());
-                  if (localWindow) top.location.href = fullURL;
-                  else GMopenInTab(fullURL, false);
-                  break;
+                  if (typeID !== Number(item.id)) { continue } const siteType = type.toLowerCase(), url = isImageType ? listSite[siteType].imageURL : listSite[siteType].webURL,
+                    fullURL = decodeURI(url + getQueryString()); if (localWindow) { top.location.href = fullURL } else { GMopenInTab(fullURL, false); break }
                 }
               });
             }
@@ -2298,32 +2048,26 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
             function submitKeywordColor() {
               let inputFgColor, inputBgColor;
               const colorReg =
-                /^(?:#[0-9a-f]{3,4}|#[0-9a-f]{6}|#[0-9a-f]{8}|rgba\(([0-9]|([1-9][0-9])|(1[0-9][0-9])|(2([0-4][0-9]|5[0-5]))),\s*([0-9]|([1-9][0-9])|(1[0-9][0-9])|(2([0-4][0-9]|5[0-5]))),\s*([0-9]|([1-9][0-9])|(1[0-9][0-9])|(2([0-4][0-9]|5[0-5]))),\s*((?!1.[1-9])[0-1]?(\.[0-9]{1,3})?)\)|rgb\(((([0-9]|([1-9][0-9])|(1[0-9][0-9])|(2([0-4][0-9]|5[0-5]))),\s*([0-9]|([1-9][0-9])|(1[0-9][0-9])|(2([0-4][0-9]|5[0-5]))),\s*([0-9]|([1-9][0-9])|(1[0-9][0-9])|(2([0-4][0-9]|5[0-5]))))|(([0-9]|([1-9][0-9])|(1[0-9][0-9])|(2([0-4][0-9]|5[0-5])))\s+([0-9]|([1-9][0-9])|(1[0-9][0-9])|(2([0-4][0-9]|5[0-5])))\s+([0-9]|([1-9][0-9])|(1[0-9][0-9])|(2([0-4][0-9]|5[0-5])))(\s+\/\s+((\d+%)|1|(0\.\d+)))?))\)|transparent|currentcolor)$/i;
-              const foregroundColorText = IS_CHN
-                ? `请输入关键词前景色（字体颜色），默认为“#f73131cd”，支持HEX, HEXA, RGB, RGBA, currentcolor的颜色格式。`
-                : `𝐏𝐥𝐞𝐚𝐬𝐞 𝐞𝐧𝐭𝐞𝐫 𝐭𝐡𝐞 𝐤𝐞𝐲𝐰𝐨𝐫𝐝 𝐟𝐨𝐫𝐞𝐠𝐫𝐨𝐮𝐧𝐝-𝐜𝐨𝐥𝐨𝐫 (𝐟𝐨𝐧𝐭 𝐜𝐨𝐥𝐨𝐫):\r\nThe default is "#f73131cd" and supports the color formats of HEX, HEXA, RGB, RGBA and currentcolor.`;
-              const backgroundColorText = IS_CHN
-                ? `请输入关键词背景色，默认为“#ffff80ad”，支持HEX, HEXA, RGB, RGBA, transparent的颜色格式。`
-                : `𝐏𝐥𝐞𝐚𝐬𝐞 𝐞𝐧𝐭𝐞𝐫 𝐭𝐡𝐞 𝐤𝐞𝐲𝐰𝐨𝐫𝐝 𝐛𝐚𝐜𝐤𝐠𝐫𝐨𝐮𝐧𝐝-𝐜𝐨𝐥𝐨𝐫:\r\nThe default is "#ffff80ad" and supports the color formats of HEX, HEXA, RGB, RGBA and transparent.`;
-              const confirmColorsText = IS_CHN ? `请确认您输入的颜色代码是否正确？` : `𝐏𝐥𝐞𝐚𝐬𝐞 𝐦𝐚𝐤𝐞 𝐬𝐮𝐫𝐞 𝐭𝐡𝐚𝐭 𝐭𝐡𝐞 𝐜𝐨𝐥𝐨𝐫 𝐜𝐨𝐝𝐞 𝐞𝐧𝐭𝐞𝐫𝐞𝐝 𝐢𝐬 𝐜𝐨𝐫𝐫𝐞𝐜𝐭?`;
-              const confirmfgColorText = IS_CHN ? "\r\n前景色代码：" : "\r\n𝐅𝐨𝐫𝐞𝐠𝐫𝐨𝐮𝐧𝐝-𝐂𝐨𝐥𝐨𝐫: ";
-              const fonfirmbgColorText = IS_CHN ? "\r\n背景色代码：" : "\r\n𝐁𝐚𝐜𝐤𝐠𝐫𝐨𝐮𝐧𝐝-𝐂𝐨𝐥𝐨𝐫: ";
-              const saveData = async () => {
-                if (!inputFgColor || !inputBgColor) return;
-                const customColor = { foregroundColor: inputFgColor.trim().toLowerCase(), backgroundColor: inputBgColor.trim().toLowerCase() };
-                _config_date_ = { ..._config_date_, keywordHighlight: true, customColor };
-                GMsetValue(CONFIGURE, encrypt(JSON.stringify(_config_date_)));
-              };
-              inputFgColor = prompt(foregroundColorText, customColor.foregroundColor);
-              if (inputFgColor === null) return;
-              else if (colorReg.test(inputFgColor.trim())) {
-                inputBgColor = prompt(backgroundColorText, customColor.backgroundColor);
-                if (inputBgColor === null) return;
-                else if (colorReg.test(inputBgColor.trim())) {
-                  const confirmForegroundColor = inputFgColor.trim().startsWith("#") ? inputFgColor.trim().toUpperCase() : inputFgColor.trim().toLowerCase();
-                  const confirmbackgroundColor = inputBgColor.trim().startsWith("#") ? inputBgColor.trim().toUpperCase() : inputBgColor.trim().toLowerCase();
-                  const confirmText = `${confirmColorsText}${confirmfgColorText}${confirmForegroundColor}${fonfirmbgColorText}${confirmbackgroundColor}`;
-                  if (!confirm(confirmText)) return;
+                /^(?:#[0-9a-f]{3,4}|#[0-9a-f]{6}|#[0-9a-f]{8}|rgba\(([0-9]|([1-9][0-9])|(1[0-9][0-9])|(2([0-4][0-9]|5[0-5]))),\s*([0-9]|([1-9][0-9])|(1[0-9][0-9])|(2([0-4][0-9]|5[0-5]))),\s*([0-9]|([1-9][0-9])|(1[0-9][0-9])|(2([0-4][0-9]|5[0-5]))),\s*((?!1.[1-9])[0-1]?(\.[0-9]{1,3})?)\)|rgb\(((([0-9]|([1-9][0-9])|(1[0-9][0-9])|(2([0-4][0-9]|5[0-5]))),\s*([0-9]|([1-9][0-9])|(1[0-9][0-9])|(2([0-4][0-9]|5[0-5]))),\s*([0-9]|([1-9][0-9])|(1[0-9][0-9])|(2([0-4][0-9]|5[0-5]))))|(([0-9]|([1-9][0-9])|(1[0-9][0-9])|(2([0-4][0-9]|5[0-5])))\s+([0-9]|([1-9][0-9])|(1[0-9][0-9])|(2([0-4][0-9]|5[0-5])))\s+([0-9]|([1-9][0-9])|(1[0-9][0-9])|(2([0-4][0-9]|5[0-5])))(\s+\/\s+((\d+%)|1|(0\.\d+)))?))\)|transparent|currentcolor)$/i,
+                foregroundColorText = IS_CHN
+                  ? `请输入关键词前景色（字体颜色），默认为“#f73131cd”，支持HEX, HEXA, RGB, RGBA, currentcolor的颜色格式。`
+                  : `𝐏𝐥𝐞𝐚𝐬𝐞 𝐞𝐧𝐭𝐞𝐫 𝐭𝐡𝐞 𝐤𝐞𝐲𝐰𝐨𝐫𝐝 𝐟𝐨𝐫𝐞𝐠𝐫𝐨𝐮𝐧𝐝-𝐜𝐨𝐥𝐨𝐫 (𝐟𝐨𝐧𝐭 𝐜𝐨𝐥𝐨𝐫):\r\nThe default is "#f73131cd" and supports the color formats of HEX, HEXA, RGB, RGBA and currentcolor.`,
+                backgroundColorText = IS_CHN
+                  ? `请输入关键词背景色，默认为“#ffff80ad”，支持HEX, HEXA, RGB, RGBA, transparent的颜色格式。`
+                  : `𝐏𝐥𝐞𝐚𝐬𝐞 𝐞𝐧𝐭𝐞𝐫 𝐭𝐡𝐞 𝐤𝐞𝐲𝐰𝐨𝐫𝐝 𝐛𝐚𝐜𝐤𝐠𝐫𝐨𝐮𝐧𝐝-𝐜𝐨𝐥𝐨𝐫:\r\nThe default is "#ffff80ad" and supports the color formats of HEX, HEXA, RGB, RGBA and transparent.`,
+                confirmColorsText = IS_CHN ? `请确认您输入的颜色代码是否正确？` : `𝐏𝐥𝐞𝐚𝐬𝐞 𝐦𝐚𝐤𝐞 𝐬𝐮𝐫𝐞 𝐭𝐡𝐚𝐭 𝐭𝐡𝐞 𝐜𝐨𝐥𝐨𝐫 𝐜𝐨𝐝𝐞 𝐞𝐧𝐭𝐞𝐫𝐞𝐝 𝐢𝐬 𝐜𝐨𝐫𝐫𝐞𝐜𝐭?`,
+                confirmfgColorText = IS_CHN ? "\r\n前景色代码：" : "\r\n𝐅𝐨𝐫𝐞𝐠𝐫𝐨𝐮𝐧𝐝-𝐂𝐨𝐥𝐨𝐫: ", fonfirmbgColorText = IS_CHN ? "\r\n背景色代码：" : "\r\n𝐁𝐚𝐜𝐤𝐠𝐫𝐨𝐮𝐧𝐝-𝐂𝐨𝐥𝐨𝐫: ",
+                saveData = async () => {
+                  if (!inputFgColor || !inputBgColor) { return }
+                  const customColor = { foregroundColor: inputFgColor.trim().toLowerCase(), backgroundColor: inputBgColor.trim().toLowerCase() };
+                  _config_date_ = { ..._config_date_, keywordHighlight: true, customColor }; GMsetValue(CONFIGURE, encrypt(JSON.stringify(_config_date_)));
+                };
+              inputFgColor = prompt(foregroundColorText, customColor.foregroundColor); if (inputFgColor === null) { return } else if (colorReg.test(inputFgColor.trim())) {
+                inputBgColor = prompt(backgroundColorText, customColor.backgroundColor); if (inputBgColor === null) { return } else if (colorReg.test(inputBgColor.trim())) {
+                  const confirmForegroundColor = inputFgColor.trim().startsWith("#") ? inputFgColor.trim().toUpperCase() : inputFgColor.trim().toLowerCase(),
+                    confirmbackgroundColor = inputBgColor.trim().startsWith("#") ? inputBgColor.trim().toUpperCase() : inputBgColor.trim().toLowerCase(),
+                    confirmText = `${confirmColorsText}${confirmfgColorText}${confirmForegroundColor}${fonfirmbgColorText}${confirmbackgroundColor}`;
+                  if (!confirm(confirmText)) { return }
                   const text = createNoticeHTML(IS_CHN ? "<dd>搜索关键词自定义颜色已保存，当前页面即将刷新！</dd>" : "<dd>Search keywords custom color has been saved!</dd>");
                   addAction.closeConfig() && GMnotification({ title: IS_CHN ? "自定义颜色保存" : "Save Custom Color", text, callbacks: { onShow: [saveData], onClose: [reload] } });
                 } else alert(IS_CHN ? "背景色 格式输入错误！" : "Background-color input-format error!");
@@ -2343,14 +2087,13 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
               if (selectEngineList.length < 3) {
                 const noticeText = IS_CHN
                   ? `\u0020您需要选择「三个」搜索引擎，还少<em>${3 - selectEngineList.length}</em>个呢！`
-                  : `\u0020Please select <b>three</b> search engines, still less<em>${3 - selectEngineList.length}</em>`;
-                const text = createNoticeHTML(`<dd><e style="font-size:24px;vertical-align:bottom">\ud83d\ude31</e>${noticeText}</dd>`);
+                  : `\u0020Please select <b>three</b> search engines, still less<em>${3 - selectEngineList.length}</em>`,
+                  text = createNoticeHTML(`<dd><e style="font-size:24px;vertical-align:bottom">\ud83d\ude31</e>${noticeText}</dd>`);
                 return GMnotification({ text, type: def.notice.error, newestOnTop: true, closeWith: ["click"] });
               }
-              const configKeys = ["hk", "gj", "lw", "kh", "ar", "aa", "au"];
-              const configValues = configKeys.map(key => qS(`#${def.notice[key]}`).checked);
-              const [isHotkey, googleJump, localWindow, keywordHighlight, antiLinkRedirect, antiAds, isAutoUpdate] = configValues;
-              const _config_date_ = { isAutoUpdate, keywordHighlight, isHotkey, selectedEngine: selectEngineList, localWindow, googleJump, antiLinkRedirect, antiAds, customColor };
+              const configKeys = ["hk", "gj", "lw", "kh", "ar", "aa", "au"], configValues = configKeys.map(key => qS(`#${def.notice[key]}`).checked),
+                [isHotkey, googleJump, localWindow, keywordHighlight, antiLinkRedirect, antiAds, isAutoUpdate] = configValues,
+                _config_date_ = { isAutoUpdate, keywordHighlight, isHotkey, selectedEngine: selectEngineList, localWindow, googleJump, antiLinkRedirect, antiAds, customColor };
               GMsetValue(CONFIGURE, encrypt(JSON.stringify(_config_date_)));
               if (await addAction.closeConfig()) {
                 const text = createNoticeHTML(IS_CHN ? "<dd>设置参数已成功保存，页面稍后自动刷新！</dd>" : "<dd>The data is saved successfully, Page will refresh!</dd>");
@@ -2371,23 +2114,20 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
             function insertHotkey() {
               document.addEventListener("keydown", e => {
                 const ekey = (e.altKey || e.key === "Alt" || e.code === "AltRight" || e.code === "AltLeft") && !e.ctrlKey && !e.shiftKey && !e.metaKey;
-                if (e.code === "KeyE" && ekey) handleClickEvent("setConfigure", 1e3, e);
-                else if (e.code === "KeyV" && ekey) handleClickEvent("listEngine", 1e3, e);
+                if (e.code === "KeyE" && ekey) handleClickEvent("setConfigure", 1e3, e); else if (e.code === "KeyV" && ekey) handleClickEvent("listEngine", 1e3, e);
                 else if (e.code === "KeyB" && ekey) handleClickEvent("filterResult", 1e3, e);
               }) || DEBUG("%cInstalling Hotkey_Setting", "color:#808080");
             }
 
             function handleClickEvent(name, time, event) {
-              stopEventPropagation(event);
-              const currentTime = performance.now();
+              stopEventPropagation(event); const currentTime = performance.now();
               currentTime - def.count.clickTimer > time && (def.count.clickTimer = currentTime) && addAction[name]();
             }
 
             function showSystemInfo() {
-              if (!CUR_WINDOW_TOP || listCurrentSite.siteTypeID === newSiteType.OTHERS) return;
-              const isFavEngine = currentSite.siteTypeID !== newSiteType.OTHERS;
-              const securityPolicy = getSecurityPolicy();
-              const fontStyle = `text-transform:capitalize;font:italic 16px/130% Candara,'Times New Roman'`;
+              if (!CUR_WINDOW_TOP || listCurrentSite.siteTypeID === newSiteType.OTHERS) { return }
+              const isFavEngine = currentSite.siteTypeID !== newSiteType.OTHERS, securityPolicy = getSecurityPolicy(),
+                fontStyle = `text-transform:capitalize;font:italic 16px/130% Candara,'Times New Roman'`;
               __console(
                 "shown_system_info",
                 `%c${def.var.scriptName}\r\n%cINTRO.URL:\u0020${def.url.homepage}\r\n%c%s%cV%s%c%s\r\n%c%s%c%s\r\n%c%s%c%s\r\n%c%s%c%s\r\n%c%s%c%s\r\n%c%s%c%s\r\n%c%s%c%s`,
@@ -2433,17 +2173,13 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
                 listTypes: { target: "#content_left", listName: "div", className: "result-op" },
                 clear: () => safeRemoveNode("#con-ar"),
                 applyButton: ({ buttonSection, target }) => {
-                  insertAfter(buttonSection, target);
-                  const width = buttonSection.clientWidth || 2e2;
-                  buttonSection.style.setProperty("--right", `-${width + 8}px`);
+                  insertAfter(buttonSection, target); const width = buttonSection.clientWidth || 2e2; buttonSection.style.setProperty("--right", `-${width + 8}px`);
                 },
               },
               google: {
                 listTypes: { target: "div.MjjYud", listName: "div" },
                 applyButton: ({ buttonSection, target }) => {
-                  insertAfter(buttonSection, target);
-                  qS(`meta[name="color-scheme"]`) && buttonSection.classList.add(def.const.darkmode);
-                  getGlobalGoogle(googleJump);
+                  insertAfter(buttonSection, target); qS(`meta[name="color-scheme"]`) && buttonSection.classList.add(def.const.darkmode); getGlobalGoogle(googleJump);
                 },
               },
               bing: {
@@ -2454,19 +2190,15 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
                   insertAfter(buttonSection, target);
                   if (document.body.classList.contains("b_dark")) buttonSection.classList.add(def.const.darkmode);
                   if (IS_REAL_GECKO && CUR_PATH_NAME.includes("riverview/relatedvideo")) return buttonSection.style.setProperty("--margin", "3px 1px 0 0");
-                  const formBox = qS(".b_searchboxForm:has(input.b_searchbox)");
-                  if (!formBox || !/^detail(?:V|v)2$/.test(getUrlParam("view"))) return;
-                  formBox.classList.add(`${def.const.scrollbarsV2}.width`);
-                  buttonSection.style.setProperty("--margin", "1px -2px 0 6px");
+                  const formBox = qS(".b_searchboxForm:has(input.b_searchbox)"); if (!formBox || !/^detail(?:V|v)2$/.test(getUrlParam("view"))) { return }
+                  formBox.classList.add(`${def.const.scrollbarsV2}.width`); buttonSection.style.setProperty("--margin", "1px -2px 0 6px");
                   qA(`input`, shadow).forEach(i => i.classList.add(def.const.scrollbarsV2));
                 },
               },
               duckduckgo: {
                 listTypes: { target: "ol.react-results--main", listName: "li" },
                 applyButton: ({ buttonSection, target }) => {
-                  insertAfter(buttonSection, target);
-                  const width = buttonSection.clientWidth || 2e2;
-                  buttonSection.style.setProperty("--right", `-${width + 8}px`);
+                  insertAfter(buttonSection, target); const width = buttonSection.clientWidth || 2e2; buttonSection.style.setProperty("--right", `-${width + 8}px`);
                 },
               },
               sogou: {
@@ -2475,42 +2207,30 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
                 applyButton: async ({ buttonSection, target, shadow }) => {
                   const currentSearchType = getUrlParam(currentSite.splitTypeName);
                   if (currentSite.imageType.includes(currentSearchType)) {
-                    await sleep(1e2, { instance: true });
-                    if (!target || qS(`#${def.const.rndButtonID}`, target.parentNode)) return;
-                    insertAfter(buttonSection, target);
-                    const width = buttonSection.clientWidth || 2e2;
-                    buttonSection.style.cssText += `--right:-${width + 10}px;--opacity:1`;
+                    await sleep(1e2, { instance: true }); if (!target || qS(`#${def.const.rndButtonID}`, target.parentNode)) { return }
+                    insertAfter(buttonSection, target); const width = buttonSection.clientWidth || 2e2; buttonSection.style.cssText += `--right:-${width + 10}px;--opacity:1`;
                     qA(`input`, shadow).forEach(node => node.classList.add(`${def.notice.random}_images`));
                   } else if (currentSearchType === "weixin") {
-                    insertAfter(buttonSection, target);
-                    buttonSection.style.cssText += "--position:relative;--opacity:1";
+                    insertAfter(buttonSection, target); buttonSection.style.cssText += "--position:relative;--opacity:1";
                     qA(`input`, shadow).forEach(node => node.classList.add(`${def.notice.random}_weixin`));
                   } else {
-                    insertAfter(buttonSection, target);
-                    await sleep(0, { instance: true });
-                    const width = buttonSection.clientWidth || 2e2;
-                    buttonSection.style.cssText += `--right:-${width + 10}px;--opacity:1`;
-                    qS(`#searchBtn2`)?.style.setProperty("right", `-${width + 120}px`);
-                  }
-                  addSearchButtonEvent(shadow, target);
+                    insertAfter(buttonSection, target); await sleep(0, { instance: true }); const width = buttonSection.clientWidth || 2e2;
+                    buttonSection.style.cssText += `--right:-${width + 10}px;--opacity:1`; qS(`#searchBtn2`)?.style.setProperty("right", `-${width + 120}px`);
+                  } addSearchButtonEvent(shadow, target);
                 },
               },
               qwant: {
                 listTypes: { target: "div[data-testid='containerWeb'] div[data-testid='sectionWeb']>div", listName: "div" },
                 applyButton: async ({ buttonSection, target }) => {
-                  insertAfter(buttonSection, target);
-                  await sleep(0, { instance: true });
-                  const width = buttonSection.clientWidth || 2e2;
-                  const llmButtonWidth = qS(`div[data-testid="llm-button-force"][class]`)?.clientWidth || 0;
-                  buttonSection.style.setProperty("--right", `-${width + llmButtonWidth + 10}px`);
+                  insertAfter(buttonSection, target); await sleep(0, { instance: true }); const width = buttonSection.clientWidth || 2e2,
+                    llmButtonWidth = qS(`div[data-testid="llm-button-force"][class]`)?.clientWidth || 0; buttonSection.style.setProperty("--right", `-${width + llmButtonWidth + 10}px`);
                 },
               },
               yandex: {
                 listTypes: { target: "#search-result", listName: "li" },
                 clear: () => safeRemoveNode("div.content__right>div"),
                 applyButton: ({ buttonSection, target }) => {
-                  insertAfter(buttonSection, target);
-                  if (document.body.classList.contains("i-ua_skin_dark")) buttonSection.classList.add(def.const.darkmode);
+                  insertAfter(buttonSection, target); if (document.body.classList.contains("i-ua_skin_dark")) buttonSection.classList.add(def.const.darkmode);
                 },
               },
               so360: {
@@ -2521,26 +2241,22 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
                 listTypes: { target: "div.s-result-list", listName: "div", className: "result-content" },
                 clear: () => safeRemoveNode(".main>.s-side-list>.result-content"),
                 applyButton: ({ buttonSection, target }) => {
-                  insertAfter(buttonSection, target);
-                  const width = buttonSection.clientWidth || 2e2;
-                  buttonSection.style.cssText += `--right:-${width + 10}px;--opacity:1`;
+                  insertAfter(buttonSection, target); const width = buttonSection.clientWidth || 2e2; buttonSection.style.cssText += `--right:-${width + 10}px;--opacity:1`;
                 },
               },
               kaifa: {
                 listTypes: { target: "ul.ant-list-items", listName: "li", className: "ant-list-item" },
                 applyButton: ({ buttonSection, target }) => {
-                  const input = qS("#search-box-container input[class~='ant-input']");
-                  const width = parseInt(computStyle(input).width || 604);
-                  target.appendChild(buttonSection);
-                  input?.style.setProperty("width", `${width}px`, "important");
+                  const input = qS("#search-box-container input[class~='ant-input']"),
+                    width = parseInt(computStyle(input).width || 604); target.appendChild(buttonSection); input?.style.setProperty("width", `${width}px`, "important");
                 },
               },
               ecosia: {
                 listTypes: { target: ".mainline__content>div:not([class])", listName: "div" },
                 clear: () => safeRemoveNode("aside>div[data-test-id='sidebar-web-related-queries']"),
                 applyCookie: () => {
-                  const sValue = `a=0:as=1:cs=0:dt=pc:f=i:fr=0:fs=1:l=en:lt=${Date.now()}:mc=en-ww:nf=1:nt=1:pz=0:t=1:tt=0:tu=auto:wu=auto:ma=1`;
-                  const option = { sKey: "ECFG", sValue, sEnd: 30, sDomain: "ecosia.org", sPath: "/", sSomeSite: "Lax" };
+                  const sValue = `a=0:as=1:cs=0:dt=pc:f=i:fr=0:fs=1:l=en:lt=${Date.now()}:mc=en-ww:nf=1:nt=1:pz=0:t=1:tt=0:tu=auto:wu=auto:ma=1`,
+                    option = { sKey: "ECFG", sValue, sEnd: 30, sDomain: "ecosia.org", sPath: "/", sSomeSite: "Lax" };
                   !/:nt=1:/.test(gbCookies.getItem("ECFG")) && setPreferences(option);
                 },
                 applyButton: ({ buttonSection, target, shadow }) => {
@@ -2553,30 +2269,22 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
                 clear: () => safeRemoveNode("#right>ol"),
                 applyButton: ({ buttonSection, target }) => {
                   if ([...currentSite.imageType, "video", "news"].includes(getUrlParam(currentSite.splitTypeName))) {
-                    target.appendChild(buttonSection);
-                    buttonSection.style.setProperty("--height", `44px`);
-                  } else {
-                    insertAfter(buttonSection, target);
-                    const width = buttonSection.clientWidth || 2e2;
-                    buttonSection.style.setProperty("--right", `-${10 + width}px`);
-                  }
+                    target.appendChild(buttonSection); buttonSection.style.setProperty("--height", `44px`);
+                  } else { insertAfter(buttonSection, target); const width = buttonSection.clientWidth || 2e2; buttonSection.style.setProperty("--right", `-${10 + width}px`) }
                 },
               },
               you: { listTypes: { target: "[data-floating-ui-portal]>[role='dialog'][data-open='true'] div>section", listName: "article" } },
               startpage: {
                 listTypes: { target: "#main>div.w-gl", listName: "div", className: "result" },
                 applyCookie: () => {
-                  const sValue = `date_timeEEEworldN1Ndisable_family_filterEEE0N1Ndisable_open_in_new_windowEEE0N1Nenable_post_methodEEE0N1Nenable_proxy_safety_suggestEEE1N1Nenable_stay_controlEEE0N1Ninstant_answersEEE1N1Nlang_homepageEEEs/device/enN1NlanguageEEEenglishN1Nlanguage_uiEEEenglishN1Nnum_of_resultsEEE20N1Nsearch_results_regionEEEallN1NsuggestionsEEE1N1Nwt_unitEEEcelsius`;
-                  const option = { sKey: "preferences", sValue, sEnd: 30, sDomain: "startpage.com", sPath: "/", sSecure: true };
+                  const sValue = `date_timeEEEworldN1Ndisable_family_filterEEE0N1Ndisable_open_in_new_windowEEE0N1Nenable_post_methodEEE0N1Nenable_proxy_safety_suggestEEE1N1Nenable_stay_controlEEE0N1Ninstant_answersEEE1N1Nlang_homepageEEEs/device/enN1NlanguageEEEenglishN1Nlanguage_uiEEEenglishN1Nnum_of_resultsEEE20N1Nsearch_results_regionEEEallN1NsuggestionsEEE1N1Nwt_unitEEEcelsius`,
+                    option = { sKey: "preferences", sValue, sEnd: 30, sDomain: "startpage.com", sPath: "/", sSecure: true };
                   !/(?:disable_open_in_new_windowEEE0|enable_post_methodEEE0)/.test(gbCookies.getItem("preferences")) && setPreferences(option);
                 },
                 applyButton: ({ buttonSection, target }) => {
-                  insertAfter(buttonSection, target);
-                  qS("meta[name='theme-color']")?.getAttribute("content") === "#0c0d0f" && buttonSection.classList.add(def.const.darkmode);
-                  const width = buttonSection.clientWidth || 2e2;
-                  const formSection = qS(`#header-search-form>.search-form-relative-container`);
-                  const maxWidth = parseInt(computStyle(formSection).maxWidth) + width;
-                  formSection?.style.setProperty("max-width", `${maxWidth}px`);
+                  insertAfter(buttonSection, target); qS("meta[name='theme-color']")?.getAttribute("content") === "#0c0d0f" && buttonSection.classList.add(def.const.darkmode);
+                  const width = buttonSection.clientWidth || 2e2, formSection = qS(`#header-search-form>.search-form-relative-container`),
+                    maxWidth = parseInt(computStyle(formSection).maxWidth) + width; formSection?.style.setProperty("max-width", `${maxWidth}px`);
                 },
               },
               brave: {
@@ -2586,18 +2294,14 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
                   gbCookies.getItem("olnt") !== "1" && setPreferences(option);
                 },
                 applyButton: ({ buttonSection, target }) => {
-                  insertAfter(buttonSection, target);
-                  const width = buttonSection.clientWidth || 2e2;
-                  buttonSection.style.setProperty("--right", `-${width + 10}px`);
+                  insertAfter(buttonSection, target); const width = buttonSection.clientWidth || 2e2; buttonSection.style.setProperty("--right", `-${width + 10}px`);
                 },
                 clear: () => safeRemoveNode("aside>div"),
               },
               yep: {
                 listTypes: { target: "div[class$='-results']>div>div", listName: "div" },
                 applyButton: async ({ buttonSection, target }) => {
-                  insertAfter(buttonSection, target);
-                  await sleep(0, { instance: true });
-                  const width = buttonSection.clientWidth || 2e2;
+                  insertAfter(buttonSection, target); await sleep(0, { instance: true }); const width = buttonSection.clientWidth || 2e2;
                   buttonSection.style.setProperty("--right", `-${10 + width}px`);
                 },
               },
@@ -2605,10 +2309,8 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
                 listTypes: { target: "ul.results-standard", listName: "li", className: "r0" },
                 clear: () => safeRemoveNode(".right-col div.infobox.infobox-right"),
                 applyButton: ({ buttonSection, target }) => {
-                  insertAfter(buttonSection, target);
-                  qS(`link#theme`)?.href.includes("dark") && buttonSection.classList.add(def.const.darkmode);
-                  const width = buttonSection.clientWidth || 2e2;
-                  buttonSection.style.setProperty("--right", `-${10 + width}px`);
+                  insertAfter(buttonSection, target); qS(`link#theme`)?.href.includes("dark") && buttonSection.classList.add(def.const.darkmode);
+                  const width = buttonSection.clientWidth || 2e2; buttonSection.style.setProperty("--right", `-${10 + width}px`);
                 },
               },
               searxng: {
@@ -2617,10 +2319,8 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
                 applyCookie: () => {
                   (gbCookies.getItem("method") !== "GET" || gbCookies.getItem("results_on_new_tab") !== "1") &&
                     setPreferences(
-                      { sKey: "method", sValue: "GET", sEnd: 30, sPath: "/" },
-                      { sKey: "results_on_new_tab", sValue: "1", sEnd: 30, sPath: "/" },
-                      { sKey: "theme", sValue: "simple", sEnd: 30, sPath: "/" },
-                      { sKey: "simple_style", sValue: "auto", sEnd: 30, sPath: "/" }
+                      { sKey: "method", sValue: "GET", sEnd: 30, sPath: "/" }, { sKey: "results_on_new_tab", sValue: "1", sEnd: 30, sPath: "/" },
+                      { sKey: "theme", sValue: "simple", sEnd: 30, sPath: "/" }, { sKey: "simple_style", sValue: "auto", sEnd: 30, sPath: "/" }
                     );
                 },
                 applyButton: ({ buttonSection, target }) => target.appendChild(buttonSection),
@@ -2642,26 +2342,17 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
 
             function insertButtons() {
               try {
-                const target = qS(currentSite.mainSelector);
-                if (!target || !getQueryString() || !safeRemoveNode("gb-button")) return;
-                const buttonSection = cE("gb-button", { id: def.const.rndButtonID });
-                const shadow = def.const.attachShadow.call(buttonSection, { mode: "closed" });
-                const darkModeCssText = currentSite.darkModeCss ? `${currentSite.darkModeCss}` : ``;
-                const buttonCssText = `${currentSite.buttonCssText}${darkModeCssText}`;
-                shadow.innerHTML = tTP.createHTML(def.var.button);
-                updateAdoptedStyleSheets(shadow, buttonCssText, def.const.buttons);
-                applyButtons(buttonSection, target, shadow);
-                addSearchButtonEvent(shadow, target);
-                scrollDetect(shadow, target);
-              } catch (e) {
-                ERROR(`${e.name} in InsertButtons:`, e.message);
-              }
+                const target = qS(currentSite.mainSelector); if (!target || !getQueryString() || !safeRemoveNode("gb-button")) { return }
+                const buttonSection = cE("gb-button", { id: def.const.rndButtonID }), shadow = def.const.attachShadow.call(buttonSection, { mode: "closed" }),
+                  darkModeCssText = currentSite.darkModeCss ? `${currentSite.darkModeCss}` : ``, buttonCssText = `${currentSite.buttonCssText}${darkModeCssText}`;
+                shadow.innerHTML = tTP.createHTML(def.var.button); updateAdoptedStyleSheets(shadow, buttonCssText, def.const.buttons);
+                applyButtons(buttonSection, target, shadow); addSearchButtonEvent(shadow, target); scrollDetect(shadow, target);
+              } catch (e) { ERROR(`${e.name} in InsertButtons:`, e.message) }
             }
 
             function applyButtons(buttonSection, target, shadow) {
-              if (currentSite.siteTypeID === newSiteType.OTHERS || qS(`#${def.const.rndButtonID}`, target.parentNode)) return;
-              const applyCookieMethod = siteConfigMap[currentSiteName]?.applyCookie;
-              const applyButtonMethod = siteConfigMap[currentSiteName]?.applyButton;
+              if (currentSite.siteTypeID === newSiteType.OTHERS || qS(`#${def.const.rndButtonID}`, target.parentNode)) { return }
+              const applyCookieMethod = siteConfigMap[currentSiteName]?.applyCookie, applyButtonMethod = siteConfigMap[currentSiteName]?.applyButton;
               typeof applyCookieMethod === "function" && applyCookieMethod();
               typeof applyButtonMethod === "function" ? applyButtonMethod({ buttonSection, target, shadow }) : insertAfter(buttonSection, target);
             }
@@ -2669,116 +2360,87 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
             function setupScrollButton(buttonSet) {
               const toggleScrollClass = () => {
                 const result = qS(`#tsf button[type='submit']`)?.getBoundingClientRect().height < 35 || qS(`#miniheader`)?.style.marginTop === "0px";
-                buttonSet.forEach(([element, className]) => element?.classList.toggle(className, Boolean(result)));
-                return result;
-              };
-              const throttleToggleScroll = throttle({ fn: toggleScrollClass, timer: "scroll", delay: 50, immed: true });
+                buttonSet.forEach(([element, className]) => element?.classList.toggle(className, Boolean(result))); return result;
+              },
+                throttleToggleScroll = throttle({ fn: toggleScrollClass, timer: "scroll", delay: 50, immed: true });
               document.addEventListener("scroll", throttleToggleScroll) ?? document.addEventListener("scrollend", toggleScrollClass);
-              const initInterval = rAF.setInterval(() => toggleScrollClass() && rAF.clearInterval(initInterval), 50);
-              const terminateInterval = async () => await sleep(2e3)(initInterval).then(rAF.clearInterval);
+              const initInterval = rAF.setInterval(() => toggleScrollClass() && rAF.clearInterval(initInterval), 50),
+                terminateInterval = async () => await sleep(2e3)(initInterval).then(rAF.clearInterval);
               document.readyState === "complete" ? terminateInterval() : document.addEventListener("DOMContentLoaded", terminateInterval);
             }
 
             function scrollDetect(shadow, target) {
-              const buttonSet = new Set();
-              const btnContainer = qS(`#${def.const.rndButtonID}`, target.parentNode);
-              const leftBtn = qS(`#${def.const.leftButton} input`, shadow);
-              const rightBtn = qS(`#${def.const.rightButton} input`, shadow);
-              if (!btnContainer || !leftBtn || !rightBtn || ![newSiteType.GOOGLE, newSiteType.BING].includes(currentSite.siteTypeID)) return;
+              const buttonSet = new Set(), btnContainer = qS(`#${def.const.rndButtonID}`, target.parentNode),
+                leftBtn = qS(`#${def.const.leftButton} input`, shadow), rightBtn = qS(`#${def.const.rightButton} input`, shadow);
+              if (!btnContainer || !leftBtn || !rightBtn || ![newSiteType.GOOGLE, newSiteType.BING].includes(currentSite.siteTypeID)) { return }
               buttonSet.add([btnContainer, def.const.scrollspan]).add([leftBtn, def.const.scrollbars]).add([rightBtn, def.const.scrollbars]);
               setupScrollButton(buttonSet);
             }
 
             function addSearchButtonEvent(shadow, target) {
-              if (!qS(`#${def.const.rndButtonID}`, target.parentNode)) return;
+              if (!qS(`#${def.const.rndButtonID}`, target.parentNode)) { return }
               qA(`span[sn]:not([event-insert])`, shadow).forEach(node => {
-                if (node.hasAttribute("event-insert")) return;
-                node.setAttribute("event-insert", true);
-                const inputElement = qS("input", node);
-                const siteTypeID = Number(node.getAttribute("sn"));
-                inputElement.addEventListener("mousedown", stopEventPropagation);
-                inputElement.addEventListener("click", (_, selectedSiteData) => {
+                if (node.hasAttribute("event-insert")) { return }
+                node.setAttribute("event-insert", true); const inputElement = qS("input", node), siteTypeID = Number(node.getAttribute("sn"));
+                inputElement.addEventListener("mousedown", stopEventPropagation); inputElement.addEventListener("click", (_, selectedSiteData) => {
                   const imageSearch = getUrlParam(currentSite.splitTypeName)?.trim();
                   if (siteTypeID === selectedSite[0].siteTypeID) selectedSiteData = selectedSite[0];
-                  else if (siteTypeID === selectedSite[1].siteTypeID) selectedSiteData = selectedSite[1];
-                  else return;
-                  const isImageSearch = currentSite.imageType.includes(imageSearch);
-                  const gotoUrl = isImageSearch ? selectedSiteData.imageURL : selectedSiteData.webURL;
-                  const finalUrl = decodeURI(gotoUrl + getQueryString());
-                  if (localWindow) top.location.href = finalUrl;
-                  else GMopenInTab(finalUrl, false);
+                  else if (siteTypeID === selectedSite[1].siteTypeID) { selectedSiteData = selectedSite[1] } else { return }
+                  const isImageSearch = currentSite.imageType.includes(imageSearch), gotoUrl = isImageSearch ? selectedSiteData.imageURL : selectedSiteData.webURL,
+                    finalUrl = decodeURI(gotoUrl + getQueryString()); if (localWindow) { top.location.href = finalUrl } else { GMopenInTab(finalUrl, false) }
                 });
               }) ?? DEBUG("%cInstalling Search_Buttons", "color:#808080");
             }
 
             function createNotice(listName, className, userdFilter) {
-              const listAttrib = className ? ` class="${className}"` : ``;
-              const noticeText = IS_CHN ? "本页所有搜索结果均被屏蔽，如异常请检查过滤词。" : "All results are blocked, Check the filters if abnormal.";
-              const filterArray = userdFilter ? `<gb-filters class="code">${IS_CHN ? "过滤词:" : "Filter:"} [${userdFilter}]</gb-filters>` : ``;
-              const tips = `<br/>✄┏━┓╋┏┓╋╋╋┏━━━┓╋╋╋╋╋╋╋╋┏┓┏┓╋┏┓<br/>✄┃┃┗┓┃┃╋╋╋┃┏━┓┃╋╋╋╋╋╋╋╋┃┣┛┗┓┃┃<br/>✄┃┏┓┗┛┣━━┓┃┗━┛┣━━┳━━┳┓┏┫┣┓┏┛┃┃<br/>✄┃┃┗┓┃┃┏┓┃┃┏┓┏┫┃━┫━━┫┃┃┃┃┃┃╋┗┛<br/>✄┃┃╋┃┃┃┗┛┃┃┃┃┗┫┃━╋━━┃┗┛┃┗┫┗┓┏┓<br/>✄┗┛╋┗━┻━━┛┗┛┗━┻━━┻━━┻━━┻━┻━┛┗┛<br/><br/>`;
-              const noticeCode = tTP.createHTML(`<${listName}${listAttrib} ${def.static.warn}>${tips}${noticeText} — ${def.var.scriptName}${filterArray}</${listName}>`);
+              const listAttrib = className ? ` class="${className}"` : ``,
+                noticeText = IS_CHN ? "本页所有搜索结果均被屏蔽，如异常请检查过滤词。" : "All results are blocked, Check the filters if abnormal.",
+                filterArray = userdFilter ? `<gb-filters class="code">${IS_CHN ? "过滤词:" : "Filter:"} [${userdFilter}]</gb-filters>` : ``,
+                tips = `<br/>✄┏━┓╋┏┓╋╋╋┏━━━┓╋╋╋╋╋╋╋╋┏┓┏┓╋┏┓<br/>✄┃┃┗┓┃┃╋╋╋┃┏━┓┃╋╋╋╋╋╋╋╋┃┣┛┗┓┃┃<br/>✄┃┏┓┗┛┣━━┓┃┗━┛┣━━┳━━┳┓┏┫┣┓┏┛┃┃<br/>✄┃┃┗┓┃┃┏┓┃┃┏┓┏┫┃━┫━━┫┃┃┃┃┃┃╋┗┛<br/>✄┃┃╋┃┃┃┗┛┃┃┃┃┗┫┃━╋━━┃┗┛┃┗┫┗┓┏┓<br/>✄┗┛╋┗━┻━━┛┗┛┗━┻━━┻━━┻━━┻━┻━┛┗┛<br/><br/>`,
+                noticeCode = tTP.createHTML(`<${listName}${listAttrib} ${def.static.warn}>${tips}${noticeText} — ${def.var.scriptName}${filterArray}</${listName}>`);
               return noticeCode;
             }
 
             function showEmptyNotice(siteName) {
-              const siteConfig = siteConfigMap[siteName];
-              if (!siteConfig) return;
-              const { target, listName, className } = siteConfig.listTypes;
-              const noticeNode = qS(`${target} [${def.static.warn}]`);
-              if (noticeNode) return;
-              const usedFilterWordsStr = escapeHTML([...usedFilterWords].join(", "));
-              const noticeCode = createNotice(listName, className, usedFilterWordsStr);
-              const el = qS(target)?.firstElementChild;
+              const siteConfig = siteConfigMap[siteName]; if (!siteConfig) { return }
+              const { target, listName, className } = siteConfig.listTypes, noticeNode = qS(`${target} [${def.static.warn}]`);
+              if (noticeNode) { return } const usedFilterWordsStr = escapeHTML([...usedFilterWords].join(", ")),
+                noticeCode = createNotice(listName, className, usedFilterWordsStr), el = qS(target)?.firstElementChild;
               if (el) el.insertAdjacentHTML(el.classList.contains(def.const.translucent) || el.classList.contains(def.const.disappear) ? "beforebegin" : "afterend", noticeCode);
               usedFilterWords.clear();
             }
 
             function filterSearchResults(filterObj) {
-              if (!filterObj || resultFilters.length === 0 || getUrlParam("iframeid")) return;
-              const { qs, delay } = filterObj;
+              if (!filterObj || resultFilters.length === 0 || getUrlParam("iframeid")) { return } const { qs, delay } = filterObj;
               qs && deBounce({ fn: filterSearchResultsProcess, timer: "filterSearchResults", delay: delay || 50 })(qs);
             }
 
             async function filterSearchResultsProcess(querystring) {
-              const selectors = buildSelectors(querystring);
-              const elements = qA(selectors);
-              if (elements.length === 0) return;
-              const returnContent = new Map();
-              elements.forEach(item => processANodeURL(item, returnContent));
-              if (returnContent.size === 0) return;
-              returnContent.forEach((content, item) => matchFilters(item, content));
-              await sleep(1e2, { instance: true });
-              const complexCommaRegex = /,(?![^()]*\))/g;
-              if (usedFilterWords.size > 0) {
-                const firstQuerySelector = querystring.split(complexCommaRegex)[0];
-                const queryElementsCount = qA(firstQuerySelector).length;
+              const selectors = buildSelectors(querystring), elements = qA(selectors);
+              if (elements.length === 0) { return } const returnContent = new Map(); elements.forEach(item => processANodeURL(item, returnContent));
+              if (returnContent.size === 0) { return } returnContent.forEach((content, item) => matchFilters(item, content)); await sleep(1e2, { instance: true });
+              const complexCommaRegex = /,(?![^()]*\))/g; if (usedFilterWords.size > 0) {
+                const firstQuerySelector = querystring.split(complexCommaRegex)[0], queryElementsCount = qA(firstQuerySelector).length;
                 if (queryElementsCount >= 2) {
-                  const firstSelectorInList = selectors.split(complexCommaRegex)[0];
-                  const remainingResultsCount = qA(firstSelectorInList).length;
-                  handleRemainingResults(remainingResultsCount);
+                  const firstSelectorInList = selectors.split(complexCommaRegex)[0], remainingResultsCount = qA(firstSelectorInList).length; handleRemainingResults(remainingResultsCount);
                 }
-              }
-              returnContent.clear();
+              } returnContent.clear();
             }
 
             function processMatchedItem(item, content, filter) {
-              usedFilterWords.add(filter);
-              item.classList.add(IS_DEBUG ? def.const.translucent : def.const.disappear);
-              if (IS_DEBUG) addDebugNotice(item, filter);
-              qA("a", item).forEach(node => node.setAttribute(def.static.anti, "blocked"));
+              usedFilterWords.add(filter); item.classList.add(IS_DEBUG ? def.const.translucent : def.const.disappear);
+              if (IS_DEBUG) addDebugNotice(item, filter); qA("a", item).forEach(node => node.setAttribute(def.static.anti, "blocked"));
               return DEBUG("Filter.match:", { filter, item, content });
             }
 
             function addDebugNotice(item, filter) {
-              if (!item || qS("notice-label", item)) return;
+              if (!item || qS("notice-label", item)) { return }
               const label = cE("notice-label", { class: "code", textContent: `<![CDATA[ "${filter}" ]]>` });
-              item.prepend(label);
-              label.addEventListener("click", e => e.target.parentNode?.classList.toggle(def.const.expend));
+              item.prepend(label); label.addEventListener("click", e => e.target.parentNode?.classList.toggle(def.const.expend));
             }
 
             function adjustUI(siteName) {
-              const logicFunction = siteConfigMap[siteName]?.clear;
-              if (typeof logicFunction === "function") logicFunction();
+              const logicFunction = siteConfigMap[siteName]?.clear; if (typeof logicFunction === "function") logicFunction();
             }
 
             function buildSelectors(querystring) {
@@ -2787,57 +2449,45 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
             }
 
             function processANodeURL(item, returnContent) {
-              if (item?.nodeType !== 1) return;
-              const href = qS("a:not(.link--color-null,[role='menuitem'],[data-testid='result-extras-site-search-link'],[title])", item)?.href ?? "";
-              const url = [1, 5, 8, 12].includes(listCurrentSite.siteTypeID) ? qS(`.${def.const.filtered}`, item)?.textContent.trim() || "" : href;
-              const content = item.innerText?.replace(/[\t\r\n\ue62b]+/g, "").trim() + getDecodeURI(url);
-              if (content) returnContent.set(item, content);
+              if (item?.nodeType !== 1) { return }
+              const href = qS("a:not(.link--color-null,[role='menuitem'],[data-testid='result-extras-site-search-link'],[title])", item)?.href ?? "",
+                url = [1, 5, 8, 12].includes(listCurrentSite.siteTypeID) ? qS(`.${def.const.filtered}`, item)?.textContent.trim() || "" : href,
+                content = item.innerText?.replace(/[\t\r\n\ue62b]+/g, "").trim() + getDecodeURI(url); if (content) returnContent.set(item, content);
             }
 
             function matchFilters(item, content) {
-              if (item?.nodeType !== 1) return;
-              try {
-                for (const filter of resultFilters) if (new RegExp(filter, "i").test(content)) return processMatchedItem(item, content, filter);
-              } catch (e) {
+              if (item?.nodeType !== 1) { return }
+              try { for (const filter of resultFilters) if (new RegExp(filter, "i").test(content)) return processMatchedItem(item, content, filter); } catch (e) {
                 ERROR(`${e.name} in MatchFilters:`, e.message);
               }
             }
 
             function handleRemainingResults(remainingResults) {
-              if (remainingResults > 3) return;
-              remainingResults === 0 ? showEmptyNotice(currentSiteName) : qS(`[${def.static.warn}]`)?.remove();
-              adjustUI(currentSiteName);
+              if (remainingResults > 3) { return } remainingResults === 0 ? showEmptyNotice(currentSiteName) : qS(`[${def.static.warn}]`)?.remove(); adjustUI(currentSiteName);
             }
 
             function getDecodeURI(href, temp) {
-              if (!href || typeof href !== "string" || href.startsWith("javascript:")) return "";
-              const invalidPercentRegex = /%(?![0-9A-Fa-f]{2})/g;
-              let result = href.replace(invalidPercentRegex, "%25");
+              if (!href || typeof href !== "string" || href.startsWith("javascript:")) { return "" }
+              const invalidPercentRegex = /%(?![0-9A-Fa-f]{2})/g; let result = href.replace(invalidPercentRegex, "%25");
               while (((temp = result), (result = decodeURIComponent(result.replace(invalidPercentRegex, "%25"))), result !== temp));
               return `\ue620${result}\ue620`;
             }
 
             function getGlobalGoogle(permission) {
-              if (!permission || CUR_HOST_NAME === "www.google.com") return;
-              const url = `${CUR_PROTOCOL}//www.google.com/ncr?prev=${CUR_PATH_NAME}${encodeURIComponent(location.search)}`;
-              const text = createNoticeHTML(`<dd class="${def.notice.center}">${IS_CHN ? "即将跳转至 Google.com (NCR)" : "Jump to Google.com (NCR)"}</dd>`);
+              if (!permission || CUR_HOST_NAME === "www.google.com") { return }
+              const url = `${CUR_PROTOCOL}//www.google.com/ncr?prev=${CUR_PATH_NAME}${encodeURIComponent(location.search)}`,
+                text = createNoticeHTML(`<dd class="${def.notice.center}">${IS_CHN ? "即将跳转至 Google.com (NCR)" : "Jump to Google.com (NCR)"}</dd>`);
               GMnotification({ title: "Google NCR", text, type: def.notice.info, callbacks: { beforeClose: [() => top.location.replace(url)] } });
             }
 
             function processMainThreadTasks() {
-              const indexPage = checkIndexPage();
-              const securePage = getSecurityPolicy();
-              const { siteTypeID, overrideCss, mainSelector, antiAdsFn, resultListProp, antiRedirectFn } = listCurrentSite;
-              if (siteTypeID === newSiteType.OTHERS) return;
-              if (!findAdoptedStyleSheet(def.const.rndstyleName)) insertStyle();
-              if (securePage) return;
-              if (antiAds && typeof antiAdsFn === "function") antiAdsFn();
-              if (indexPage) return;
-              const target = qS(mainSelector);
-              target && !qS(`#${def.const.rndButtonID}`, target.parentNode) && insertButtons();
+              const indexPage = checkIndexPage(), securePage = getSecurityPolicy(),
+                { siteTypeID, overrideCss, mainSelector, antiAdsFn, resultListProp, antiRedirectFn } = listCurrentSite;
+              if (siteTypeID === newSiteType.OTHERS) { return } if (!findAdoptedStyleSheet(def.const.rndstyleName)) insertStyle();
+              if (securePage) { return } if (antiAds && typeof antiAdsFn === "function") antiAdsFn(); if (indexPage) { return }
+              const target = qS(mainSelector); target && !qS(`#${def.const.rndButtonID}`, target.parentNode) && insertButtons();
               if (overrideCss && !findAdoptedStyleSheet(def.const.rndclassName)) insertCSS(listCurrentSite);
-              if (antiResultsFilter) filterSearchResults(resultListProp);
-              if (antiLinkRedirect && typeof antiRedirectFn === "function") antiRedirectFn();
+              if (antiResultsFilter) filterSearchResults(resultListProp); if (antiLinkRedirect && typeof antiRedirectFn === "function") antiRedirectFn();
             }
 
             function searchButtonAndStylesObserve() {
@@ -2848,42 +2498,31 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
             }
 
             function requestIconsForScriptUpdate(requestVersion) {
-              if (decrypt(requestVersion) === def.var.curVersion) return;
-              DEBUG("%cRequest Remote icon data for script update.", "color:#25f");
-              GMsetValue(VERSION, encrypt(def.var.curVersion));
-              updateToRequestIcon();
+              if (decrypt(requestVersion) === def.var.curVersion) { return } DEBUG("%cRequest Remote icon data for script update.", "color:#25f");
+              GMsetValue(VERSION, encrypt(def.var.curVersion)); updateToRequestIcon();
             }
 
             /* SEARCH_ENGINE_ASSISTANT_MAIN_PROCESS */
 
             void (function (updateFlag, requestVersion) {
-              searchButtonAndStylesObserve();
-              if (!CUR_WINDOW_TOP) return;
-              parseUpdateInformatio(getUpdateInformation(updateFlag));
-              showSystemInfo();
-              insertMenus();
+              searchButtonAndStylesObserve(); if (!CUR_WINDOW_TOP) { return }
+              parseUpdateInformatio(getUpdateInformation(updateFlag)); showSystemInfo(); insertMenus();
               requestIconsForScriptUpdate(requestVersion);
             })(await cache.get(AUTOCHECK), await GMgetValue(VERSION));
           })(
             updateFlag => {
-              if (!CUR_WINDOW_TOP || !isAutoUpdate || (updateFlag && !setDebuggerMode())) return;
+              if (!CUR_WINDOW_TOP || !isAutoUpdate || (updateFlag && !setDebuggerMode())) { return }
               const updateDetectionResponses = updateDetectionAddress.map(addr => fetchUpdateResponse(addr));
               return Promise.any(updateDetectionResponses).catch(e => ERROR(`${e.name} in GetUpdateInformation:`, e.message) ?? object());
             },
             async updateResponse => {
               try {
                 const response = await updateResponse;
-                if (!response) return;
-                const { res, url } = response;
-                if (!res || !url) return showUpdateError();
-                const [version, notes] = [extractVersion(res), extractNotes(res)];
-                if (!version) return;
-                const newUpdateHTML = generateUpdateHTML(version, generateUpdateList(notes));
-                if (versionCompare(def.var.curVersion, version)) showNewUpdateNotify(version, newUpdateHTML, url);
-                else showSuccessUpdateNotify();
-              } catch (e) {
-                ERROR(`${e.name} in ParseUpdateInformation: ${e?.message}`);
-              }
+                if (!response) { return } const { res, url } = response;
+                if (!res || !url) { return showUpdateError() } const [version, notes] = [extractVersion(res), extractNotes(res)];
+                if (!version) { return } const newUpdateHTML = generateUpdateHTML(version, generateUpdateList(notes));
+                if (versionCompare(def.var.curVersion, version)) { showNewUpdateNotify(version, newUpdateHTML, url) } else { showSuccessUpdateNotify() }
+              } catch (e) { ERROR(`${e.name} in ParseUpdateInformation: ${e?.message}`) }
             }
           );
         })(function () {
@@ -2891,53 +2530,45 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
             "1cGRhdGUuZ3JlYXN5Zm9yay5vcmclMkZzY3JpcHRzJTJGMTI5MDklMkZHb29nbGVfYmFpZHVfU3dpdGNoZXJfKEFMTF9pbl9PbmUpLm1ldGEuanM=",
             "yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tJTJGRjl5NG5nJTJGR3JlYXN5Rm9yay1TY3JpcHRzJTJGbWFzdGVyJTJGR29vZ2xlJTI1MjAlMjUyNiUyNTIwQmFpZHUlMjUyMFN3aXRjaGVyLm1ldGEuanM=",
             "vcGVudXNlcmpzLm9yZyUyRmluc3RhbGwlMkZmOXk0bmclMkZHb29nbGVfYmFpZHVfU3dpdGNoZXJfKEFMTF9pbl9PbmUpLm1ldGEuanM=",
-          ];
-          return updateURLArray.map(url => `${decrypt(`aHR0cHMlM0ElMkYlMkZ${url}`)}?${generateRandomString(32, "hex")}`);
+          ]; return updateURLArray.map(url => `${decrypt(`aHR0cHMlM0ElMkYlMkZ${url}`)}?${generateRandomString(32, "hex")}`);
         });
       })(
         async () => {
-          const customColor = { foregroundColor: "#f73131cd", backgroundColor: "#ffff80ad" };
-          const defaults = { isAutoUpdate: true, keywordHighlight: false, isHotkey: true, selectedEngine: [1, 2, 3], localWindow: true };
+          const customColor = { foregroundColor: "#f73131cd", backgroundColor: "#ffff80ad" },
+            defaults = { isAutoUpdate: true, keywordHighlight: false, isHotkey: true, selectedEngine: [1, 2, 3], localWindow: true };
           safeObject.assign(defaults, { googleJump: true, antiLinkRedirect: true, antiAds: false, customColor });
           const configure = await GMgetValue(CONFIGURE);
           if (!configure) {
-            const values = await GMlistValues();
-            values.forEach(key => GMdeleteValue(key));
+            const values = await GMlistValues(); values.forEach(key => GMdeleteValue(key));
             return GMsetValue(CONFIGURE, encrypt(JSON.stringify(defaults))), defaults;
           }
           try {
             const config_date = JSON.parse(decrypt(configure));
             return { ...defaults, ...config_date, selectedEngine: safeArray.isArray(config_date.selectedEngine) ? config_date.selectedEngine : defaults.selectedEngine };
-          } catch (_) {
-            return defaults;
-          }
+          } catch (_) { return defaults }
         },
         async () => {
           const defaults = { filter: [], trigger: false };
           try {
-            const resultFilter = await GMgetValue(RESULTFILTER);
-            if (!resultFilter) return defaults;
-            const { filter, trigger } = JSON.parse(decrypt(resultFilter));
-            return { filter: safeArray.isArray(filter) ? filter : [], trigger };
-          } catch (_) {
-            return defaults;
-          }
+            const resultFilter = await GMgetValue(RESULTFILTER); if (!resultFilter) { return defaults }
+            const { filter, trigger } = JSON.parse(decrypt(resultFilter)); return { filter: safeArray.isArray(filter) ? filter : [], trigger };
+          } catch (_) { return defaults }
         },
         url => {
-          if (!CUR_WINDOW_TOP || !url) return;
+          if (!CUR_WINDOW_TOP || !url) { return }
           return new Promise((resolve, reject) => {
-            const headers = { Accept: "*/*", Referer: url };
-            const onload = response => {
-              if (response.readyState !== 4) return;
-              if (response.status === 200) {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result.replace("data:data:image/png;base64,", "data:"));
-                reader.onerror = () => reject(new Error("Convert failed"));
-                reader.readAsDataURL(response.response);
-              } else if (response.status !== 0) reject(new Error("NoAccessError"));
-            };
-            const onerror = () => reject(new Error("NetworkError"));
-            const ontimeout = () => reject(new Error("TimeoutError"));
+            const headers = { Accept: "*/*", Referer: url },
+              onload = response => {
+                if (response.readyState !== 4) { return }
+                if (response.status === 200) {
+                  const reader = new FileReader();
+                  reader.onload = () => resolve(reader.result.replace("data:data:image/png;base64,", "data:"));
+                  reader.onerror = () => reject(new Error("Convert failed"));
+                  reader.readAsDataURL(response.response);
+                } else if (response.status !== 0) reject(new Error("NoAccessError"));
+              },
+              onerror = () => reject(new Error("NetworkError")),
+              ontimeout = () => reject(new Error("TimeoutError"));
             GMxmlhttpRequest({ url, headers, method: "GET", timeout: 5e3, responseType: "blob", onload, onerror, ontimeout });
           }).catch(e => Promise.reject(new Error("RequestRemoteIcon: " + e.message)));
         },
@@ -2949,43 +2580,28 @@ void (function (ctx, uctx, sctx, searchEngineAssistant, arrayProxy, customFns) {
     })(initTrustedTypesPolicy(), safeJSON, sessionStorage?.getItem(def.static.navinfo));
   },
   (function (methods) {
-    const methodMap = new Map(Object.entries(methods));
-    const handler = {
-      get(target, prop, receiver) {
-        const method = methodMap.get(prop);
-        return method ? (...args) => method.apply(target, args) : Reflect.get(target, prop, receiver);
-      },
-    };
+    const methodMap = new Map(Object.entries(methods)),
+      handler = { get(target, prop, receiver) { const method = methodMap.get(prop); return method ? (...args) => method.apply(target, args) : Reflect.get(target, prop, receiver) } };
     return array => (Array.isArray(array) ? new Proxy(array, handler) : array);
   })({
-    SomeX(callback, thisArg = this) {
-      for (let i = 0; i < this.length; i++) if (callback.call(thisArg, this[i], i, this)) return true;
-    },
-    FindX(callback, thisArg = this) {
-      for (let i = 0; i < this.length; i++) if (callback.call(thisArg, this[i], i, this)) return this[i];
-    },
+    SomeX(callback, thisArg = this) { for (let i = 0; i < this.length; i++) if (callback.call(thisArg, this[i], i, this)) { return true } },
+    FindX(callback, thisArg = this) { for (let i = 0; i < this.length; i++) if (callback.call(thisArg, this[i], i, this)) { return this[i] } },
   }),
   ((ctx, mS = [..."t𝚁TjLWO𝙳ZR𝚖𝚜i𝚗gE𝚎𝚠2H𝚘8YkxC𝙲N0GcBrF5Qda4𝙺XoK𝚆𝚣hIn7uw1e𝚌bpM𝚞PUJlS9szD𝚝Avm3𝚟6qfV𝚡y𝚊"]) => {
-    const oC = Object.create.bind(null, null);
-    const sP = (O, o) => {
-      const clone = O.create(O.getPrototypeOf(o));
-      for (const key of Reflect.ownKeys(o)) Reflect.defineProperty(clone, key, O.getOwnPropertyDescriptor(o, key));
-      return clone;
-    };
-    const eH = type => {
-      const original = ctx.history[type];
-      return function () {
-        return ctx.dispatchEvent(new CustomEvent(type, { detail: { state: arguments[0], title: arguments[1], url: arguments[2] } })), original.apply(this, arguments);
+    const oC = Object.create.bind(null, null),
+      sP = (O, o) => {
+        const clone = O.create(O.getPrototypeOf(o)); for (const key of Reflect.ownKeys(o)) Reflect.defineProperty(clone, key, O.getOwnPropertyDescriptor(o, key)); return clone;
+      },
+      eH = type => {
+        const original = ctx.history[type];
+        return function () { return ctx.dispatchEvent(new CustomEvent(type, { detail: { state: arguments[0], title: arguments[1], url: arguments[2] } })), original.apply(this, arguments) };
+      },
+      tS = storageType => {
+        try {
+          ctx.addEventListener("error", e => (e.error?.name === "SecurityError" || e.message?.includes("SecurityError")) && e.preventDefault(), { once: true });
+          return ctx[storageType].setItem("__gb_storage_test__", true), ctx[storageType].removeItem("__gb_storage_test__"), ctx[storageType];
+        } catch (_) { return null }
       };
-    };
-    const tS = storageType => {
-      try {
-        ctx.addEventListener("error", e => (e.error?.name === "SecurityError" || e.message?.includes("SecurityError")) && e.preventDefault(), { once: true });
-        return ctx[storageType].setItem("__gb_storage_test__", true), ctx[storageType].removeItem("__gb_storage_test__"), ctx[storageType];
-      } catch (_) {
-        return null;
-      }
-    };
     return { oC, mS, sP, eH, lS: tS("localStorage"), sS: tS("sessionStorage") };
   })(typeof window !== "undefined" ? window : this)
 );
